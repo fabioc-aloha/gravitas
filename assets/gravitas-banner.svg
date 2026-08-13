@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="420" viewBox="0 0 1600 420" role="img" aria-labelledby="title description">
+  <title id="title">Gravitas</title>
+  <desc id="description">A refined, blue-toned black-hole illustration with an accretion disk and gravitational lensing.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#050a16"/>
+      <stop offset=".55" stop-color="#0a1830"/>
+      <stop offset="1" stop-color="#02050c"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#d8f7ff" stop-opacity=".9"/>
+      <stop offset=".2" stop-color="#72cfff" stop-opacity=".7"/>
+      <stop offset=".7" stop-color="#1262bc" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#1262bc" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2a7dcc" stop-opacity="0"/>
+      <stop offset=".26" stop-color="#4db6ec" stop-opacity=".65"/>
+      <stop offset=".5" stop-color="#e2fbff"/>
+      <stop offset=".74" stop-color="#4db6ec" stop-opacity=".65"/>
+      <stop offset="1" stop-color="#2a7dcc" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="softGlow" x="-80%" y="-150%" width="260%" height="400%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="fineGlow" x="-80%" y="-150%" width="260%" height="400%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#86cfff" stroke-opacity=".045"/>
+    </pattern>
+  </defs>
+
+  <rect width="1600" height="420" fill="url(#bg)"/>
+  <rect width="1600" height="420" fill="url(#grid)"/>
+  <path d="M0 332C300 255 506 413 798 314S1270 204 1600 302V420H0Z" fill="#0b2a4a" opacity=".23"/>
+  <g fill="#d5f3ff">
+    <circle cx="82" cy="72" r="1" opacity=".8"/><circle cx="218" cy="345" r="1.2" opacity=".6"/>
+    <circle cx="348" cy="114" r=".8" opacity=".65"/><circle cx="514" cy="346" r="1" opacity=".55"/>
+    <circle cx="1040" cy="78" r="1" opacity=".72"/><circle cx="1322" cy="62" r=".9" opacity=".6"/>
+    <circle cx="1510" cy="286" r="1.25" opacity=".7"/><circle cx="1450" cy="360" r=".8" opacity=".55"/>
+  </g>
+
+  <g transform="translate(1195 211)">
+    <circle r="180" fill="url(#halo)" opacity=".75"/>
+    <ellipse rx="268" ry="67" fill="none" stroke="#1885d1" stroke-opacity=".22" stroke-width="38" filter="url(#softGlow)"/>
+    <ellipse rx="268" ry="67" fill="none" stroke="url(#arc)" stroke-width="13" filter="url(#fineGlow)"/>
+    <path d="M-250 5C-156-74 156-74 250 5C144-40-144-40-250 5Z" fill="#8addff" opacity=".25"/>
+    <ellipse rx="116" ry="110" fill="#01030a"/>
+    <ellipse rx="124" ry="118" fill="none" stroke="#6bc9fa" stroke-opacity=".42" stroke-width="2"/>
+    <path d="M-108 16C-54 84 54 84 108 16" fill="none" stroke="#d7f8ff" stroke-opacity=".7" stroke-width="3"/>
+  </g>
+
+  <path d="M111 120H485" stroke="#4fb7eb" stroke-opacity=".72" stroke-width="2"/>
+  <path d="M111 120H205" stroke="#def9ff" stroke-width="2"/>
+  <text x="110" y="194" fill="#f2fbff" font-family="Aptos Display, Segoe UI, Arial, sans-serif" font-size="78" font-weight="600" letter-spacing="3">GRAVITAS</text>
+  <text x="114" y="247" fill="#82caee" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="23" font-weight="600" letter-spacing="4">GENERATIVE BLACK-HOLE SCENES</text>
+  <text x="114" y="284" fill="#b7cbd9" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="20" letter-spacing=".5">Grounded in relativity</text>
+  <text x="114" y="344" fill="#7193aa" font-family="Aptos, Segoe UI, Arial, sans-serif" font-size="14" letter-spacing="2">KERR LENSING  /  ACCRETION PHYSICS  /  COSMIC BACKGROUNDS</text>
+</svg>
