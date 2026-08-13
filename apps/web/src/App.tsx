@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { createRenderPlan, defaultSceneConfig, outputSizes, type SceneConfig } from './sceneConfig'
+import { modelFormulas } from './formulas'
 import { renderScene } from './sceneRenderer'
 
 function App() {
@@ -107,6 +108,16 @@ function App() {
             <div><dt>Outputs</dt><dd>{outputSizes.map((size) => `${size.width}×${size.height}`).join(' and ')}</dd></div>
           </dl>
         </div>
+        {controlsPage === 'nerds' && <aside className="formula-panel panel">
+          <p className="eyebrow">Model notebook</p>
+          <h2>What the controls mean</h2>
+          <p className="nerd-note">Formulas guide the reference model. The fast preview uses labeled visual proxies.</p>
+          {modelFormulas.map((formula) => <section key={formula.title}>
+            <h3>{formula.title}</h3>
+            <code>{formula.expression}</code>
+            <p>{formula.note}</p>
+          </section>)}
+        </aside>}
       </section>
     </main>
   )

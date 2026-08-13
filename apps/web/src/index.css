@@ -66,6 +66,7 @@ dl div { border-top: 1px solid var(--cp-border); padding-top: 16px; }
 dt { color: var(--cp-text-soft); font-size: .85rem; font-weight: 700; text-transform: uppercase; }
 dd { margin: 4px 0 0; }
 .studio { display: grid; gap: 24px; grid-template-columns: minmax(280px, .7fr) minmax(0, 1.3fr); }
+.studio:has(.formula-panel) { grid-template-columns: minmax(240px, .65fr) minmax(0, 1.1fr) minmax(240px, .65fr); }
 .controls { display: grid; gap: 16px; align-content: start; }
 label { color: var(--cp-text-muted); display: grid; font-size: .9rem; gap: 8px; }
 label output { color: var(--cp-text); float: right; justify-self: end; margin-top: -28px; }
@@ -82,4 +83,10 @@ select { background: var(--cp-surface); border: 1px solid var(--cp-border); bord
 .nerd-note { color: var(--cp-text-muted); font-size: .85rem; margin: 0; }
 .preview canvas { background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: .625rem; display: block; height: auto; max-width: 100%; }
 .preview > p { color: var(--cp-text-muted); font-size: .9rem; margin-top: 16px; }
-@media (max-width: 860px) { main { padding: 48px 20px; } .studio { grid-template-columns: 1fr; } }
+.formula-panel { align-self: start; }
+.formula-panel section { border-top: 1px solid var(--cp-border); margin-top: 16px; padding-top: 16px; }
+.formula-panel h3 { font-size: .9rem; margin: 0 0 8px; }
+.formula-panel code { background: var(--cp-surface-soft); color: var(--cp-text); display: inline-block; font-family: Consolas, "Courier New", Courier, monospace; font-size: .82rem; padding: 6px 8px; }
+.formula-panel section p { color: var(--cp-text-muted); font-size: .82rem; margin-top: 8px; }
+@media (max-width: 1080px) { .studio:has(.formula-panel) { grid-template-columns: 1fr 1fr; } .formula-panel { grid-column: 1 / -1; } }
+@media (max-width: 860px) { main { padding: 48px 20px; } .studio, .studio:has(.formula-panel) { grid-template-columns: 1fr; } .formula-panel { grid-column: auto; } }
