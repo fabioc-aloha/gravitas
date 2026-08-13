@@ -46,6 +46,7 @@ The blue palette requested for Douglas is a selectable color mapping. Physically
 - [Research sources and validation](docs/research/sources.md)
 - [Rendering algorithms](docs/algorithms/rendering.md)
 - [Azure implementation plan](docs/plans/2026-08-13-azure-web-app.md)
+- [Feature priorities](docs/feature-priorities.md)
 
 ## Scientific guardrails
 
