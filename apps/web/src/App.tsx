@@ -49,13 +49,13 @@ function App() {
           <label>Spin/disk axis inclination <output>{config.axisInclinationDegrees}°</output>
             <input type="range" min="0" max="85" value={config.axisInclinationDegrees} onChange={(event) => update('axisInclinationDegrees', Number(event.target.value))} />
           </label>
-          <label>Orbit around black hole <output>{config.orbitDegrees}°</output>
+          <label>Observer orbit <output>{config.orbitDegrees}°</output>
             <input type="range" min="0" max="360" value={config.orbitDegrees} onChange={(event) => update('orbitDegrees', Number(event.target.value))} />
           </label>
           <label>Zoom <output>{config.zoom.toFixed(1)}×</output>
             <input type="range" min="0.5" max="3" step="0.1" value={config.zoom} onChange={(event) => update('zoom', Number(event.target.value))} />
           </label>
-          <label>Disk temperature <output>{(config.diskTemperature / 1_000_000).toFixed(0)}M K</output>
+          <label>Disk temperature scale <output>{(config.diskTemperature / 1_000_000).toFixed(0)}M K</output>
             <input type="range" min="1000000" max="100000000" step="1000000" value={config.diskTemperature} onChange={(event) => update('diskTemperature', Number(event.target.value))} />
           </label>
           <label className="checkbox">
@@ -70,8 +70,9 @@ function App() {
           <canvas ref={previewRef} width="1400" height="700" aria-label="Black-hole scene preview" />
           <p>Fast visual approximation. Final downloads include 5120×1440 and 3440×1440 PNGs.</p>
           <dl>
-            <div><dt>Physics cues</dt><dd>Critical curve, disk lensing, asymmetric brightness</dd></div>
+            <div><dt>Physics cues</dt><dd>Projected disk, inclination-driven beaming, and a critical-curve approximation</dd></div>
             <div><dt>Palette note</dt><dd>Blue is a selectable visualization, not a direct observation.</dd></div>
+            <div><dt>Model limit</dt><dd>Spin and temperature are preview cues; Kerr ray tracing is planned for reference-quality output.</dd></div>
             <div><dt>Outputs</dt><dd>{outputSizes.map((size) => `${size.width}×${size.height}`).join(' and ')}</dd></div>
           </dl>
         </div>

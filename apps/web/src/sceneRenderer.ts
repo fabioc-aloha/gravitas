@@ -1,4 +1,5 @@
 import type { SceneConfig } from './sceneConfig'
+import { dopplerAsymmetry, observerOrbitRadians } from './previewPhysics'
 
 function random(seed: number) {
   let state = seed >>> 0
@@ -30,7 +31,8 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   const centerY = height * 0.5
   const scale = Math.min(width, height) * config.zoom
   const axisInclination = config.axisInclinationDegrees * Math.PI / 180
-  const orbit = config.orbitDegrees * Math.PI / 180
+  const orbit = observerOrbitRadians(config.orbitDegrees)
+  const beaming = dopplerAsymmetry(config.axisInclinationDegrees)
   const diskHeight = Math.max(scale * 0.035, Math.cos(axisInclination) * scale * 0.14)
   const diskWidth = scale * 0.35
   const blue = config.blueSpectrum ? '#4da6ff' : accent
@@ -38,7 +40,7 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   context.fillStyle = background
   context.fillRect(0, 0, width, height)
 
-  const sky = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.65)
+  const sky = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.65 / config.zoom)
   sky.addColorStop(0, rgba(blue, 0.15))
   sky.addColorStop(0.5, rgba(blue, 0.045))
   sky.addColorStop(1, 'transparent')
@@ -47,8 +49,8 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
 
   const stars = config.background === 'deep-space' ? 800 : 420
   for (let index = 0; index < stars; index += 1) {
-    const x = rand() * width
-    const y = rand() * height
+    const x = centerX + (rand() * width - centerX) * config.zoom
+    const y = centerY + (rand() * height - centerY) * config.zoom
     const size = rand() * 1.7 + 0.25
     context.fillStyle = rgba(text, 0.15 + rand() * 0.7)
     context.beginPath()
@@ -58,17 +60,21 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
 
   context.save()
   context.translate(centerX, centerY)
-  context.rotate(axisInclination * 0.15 + orbit * 0.06)
+  context.rotate(orbit)
   const temperature = Math.min(1, config.diskTemperature / 100_000_000)
   const approachingSide = Math.cos(orbit) >= 0 ? 1 : -1
+  const beamedOpacity = 0.2 + temperature * beaming * 0.5
   const diskGradient = context.createLinearGradient(-diskWidth, 0, diskWidth, 0)
   diskGradient.addColorStop(0, rgba(blue, 0.04))
   diskGradient.addColorStop(0.26, rgba(blue, 0.35))
-  if (approachingSide > 0) {
+  if (beaming < 0.01) {
     diskGradient.addColorStop(0.5, rgba(text, 0.82))
-    diskGradient.addColorStop(0.7, rgba(blue, 0.18 + temperature * 0.55))
+    diskGradient.addColorStop(0.74, rgba(blue, 0.35))
+  } else if (approachingSide > 0) {
+    diskGradient.addColorStop(0.5, rgba(text, 0.82))
+    diskGradient.addColorStop(0.7, rgba(blue, beamedOpacity))
   } else {
-    diskGradient.addColorStop(0.3, rgba(blue, 0.18 + temperature * 0.55))
+    diskGradient.addColorStop(0.3, rgba(blue, beamedOpacity))
     diskGradient.addColorStop(0.5, rgba(text, 0.82))
   }
   diskGradient.addColorStop(1, rgba(blue, 0.04))
@@ -99,7 +105,6 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
 
   context.save()
   context.translate(centerX, centerY)
-  context.scale(1, 1 - Math.sin(axisInclination) * 0.08)
   context.fillStyle = '#000000'
   context.beginPath()
   context.arc(0, 0, shadowRadius, 0, Math.PI * 2)

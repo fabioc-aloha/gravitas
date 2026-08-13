@@ -22,6 +22,7 @@ This document records the sources that validate the renderer requirements. It do
 - The Kerr critical curve is nearly circular for low inclinations and can become asymmetric at high spin/inclination.
 - A color palette is not itself a measurement. Blue spectral coloration must be presented as either temperature/redshift-derived or a chosen visualization mapping.
 - The baseline UI assumes an aligned Kerr spin axis and thin-disk angular-momentum axis. Independent tilt controls require a warped or precessing-disk model and are therefore not exposed in the MVP.
+- MVP control audit: shared-axis inclination changes projected disk aspect ratio and Doppler-asymmetry strength; observer orbit changes the common scene position angle; zoom changes the field framing. Spin, temperature, and lensing remain explicitly labeled preview approximations until the Kerr ray-tracing path is implemented.
 
 ## NASA background provenance
 
