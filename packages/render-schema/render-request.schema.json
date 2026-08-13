@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gravitas Render Request",
+  "type": "object",
+  "required": ["preset", "spin", "inclinationDegrees", "seed"],
+  "properties": {
+    "preset": {
+      "enum": ["generic-kerr", "m87-2019", "sgr-a-2022", "artistic"]
+    },
+    "spin": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 0.998
+    },
+    "inclinationDegrees": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 85
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}
