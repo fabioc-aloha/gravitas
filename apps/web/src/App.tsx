@@ -1,19 +1,80 @@
+import { useEffect, useRef, useState } from 'react'
+
+import { createRenderPlan, defaultSceneConfig, outputSizes, type SceneConfig } from './sceneConfig'
+import { renderScene } from './sceneRenderer'
+
 function App() {
+  const [config, setConfig] = useState<SceneConfig>(defaultSceneConfig)
+  const [isExporting, setIsExporting] = useState(false)
+  const previewRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    if (previewRef.current) renderScene(previewRef.current, config)
+  }, [config])
+
+  function update<K extends keyof SceneConfig>(key: K, value: SceneConfig[K]) {
+    setConfig((current) => ({ ...current, [key]: value }))
+  }
+
+  async function downloadWallpapers() {
+    setIsExporting(true)
+    const plan = createRenderPlan(config)
+    for (const output of plan.outputs) {
+      const canvas = document.createElement('canvas')
+      canvas.width = output.width
+      canvas.height = output.height
+      renderScene(canvas, config)
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+      if (!blob) continue
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = `gravitas-${output.width}x${output.height}.png`
+      link.click()
+      URL.revokeObjectURL(link.href)
+    }
+    setIsExporting(false)
+  }
+
   return (
     <main>
       <p className="eyebrow">Scientific cosmic generator</p>
       <h1>Gravitas</h1>
       <p className="tagline">Generative black-hole scenes, grounded in relativity.</p>
-      <section className="panel">
-        <h2>Development scaffold ready</h2>
-        <p>
-          The interactive scene controls and dual-format export workflow will live here.
-        </p>
-        <dl>
-          <div><dt>Outputs</dt><dd>5120×1440 and 3440×1440</dd></div>
-          <div><dt>Physics</dt><dd>Kerr lensing, Doppler beaming, and redshift</dd></div>
-          <div><dt>Mode</dt><dd>WebGPU preview with queued final renders</dd></div>
-        </dl>
+      <section className="studio">
+        <div className="controls panel">
+          <h2>Scene controls</h2>
+          <label>Spin <output>{config.spin.toFixed(3)}</output>
+            <input type="range" min="0" max="0.998" step="0.001" value={config.spin} onChange={(event) => update('spin', Number(event.target.value))} />
+          </label>
+          <label>Inclination <output>{config.inclinationDegrees}°</output>
+            <input type="range" min="0" max="85" value={config.inclinationDegrees} onChange={(event) => update('inclinationDegrees', Number(event.target.value))} />
+          </label>
+          <label>Camera yaw <output>{config.yawDegrees}°</output>
+            <input type="range" min="-180" max="180" value={config.yawDegrees} onChange={(event) => update('yawDegrees', Number(event.target.value))} />
+          </label>
+          <label>Camera pitch <output>{config.pitchDegrees}°</output>
+            <input type="range" min="-45" max="45" value={config.pitchDegrees} onChange={(event) => update('pitchDegrees', Number(event.target.value))} />
+          </label>
+          <label>Disk temperature <output>{(config.diskTemperature / 1_000_000).toFixed(0)}M K</output>
+            <input type="range" min="1000000" max="100000000" step="1000000" value={config.diskTemperature} onChange={(event) => update('diskTemperature', Number(event.target.value))} />
+          </label>
+          <label className="checkbox">
+            <input type="checkbox" checked={config.blueSpectrum} onChange={(event) => update('blueSpectrum', event.target.checked)} />
+            Blue-spectrum visualization
+          </label>
+          <button type="button" onClick={downloadWallpapers} disabled={isExporting}>
+            {isExporting ? 'Generating…' : 'Download both wallpapers'}
+          </button>
+        </div>
+        <div className="preview panel">
+          <canvas ref={previewRef} width="1400" height="700" aria-label="Black-hole scene preview" />
+          <p>Fast visual approximation. Final downloads include 5120×1440 and 3440×1440 PNGs.</p>
+          <dl>
+            <div><dt>Physics cues</dt><dd>Critical curve, disk lensing, asymmetric brightness</dd></div>
+            <div><dt>Palette note</dt><dd>Blue is a selectable visualization, not a direct observation.</dd></div>
+            <div><dt>Outputs</dt><dd>{outputSizes.map((size) => `${size.width}×${size.height}`).join(' and ')}</dd></div>
+          </dl>
+        </div>
       </section>
     </main>
   )
