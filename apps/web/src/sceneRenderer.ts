@@ -34,7 +34,7 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   const orbit = observerOrbitRadians(config.orbitDegrees)
   const beaming = dopplerAsymmetry(config.axisInclinationDegrees)
   const diskHeight = Math.max(scale * 0.035, Math.cos(axisInclination) * scale * 0.14)
-  const diskWidth = scale * 0.35
+  const diskWidth = scale * (0.4 - config.innerDiskRadius * 0.008)
   const blue = config.blueSpectrum ? '#4da6ff' : accent
 
   context.fillStyle = background
@@ -62,8 +62,8 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   context.translate(centerX, centerY)
   context.rotate(orbit)
   const temperature = Math.min(1, config.diskTemperature / 100_000_000)
-  const approachingSide = Math.cos(orbit) >= 0 ? 1 : -1
-  const beamedOpacity = 0.2 + temperature * beaming * 0.5
+  const approachingSide = (Math.cos(orbit) >= 0 ? 1 : -1) * (config.flowDirection === 'prograde' ? 1 : -1)
+  const beamedOpacity = 0.2 + temperature * beaming * (0.25 + config.emissivitySlope * 0.08)
   const diskGradient = context.createLinearGradient(-diskWidth, 0, diskWidth, 0)
   diskGradient.addColorStop(0, rgba(blue, 0.04))
   diskGradient.addColorStop(0.26, rgba(blue, 0.35))
@@ -79,7 +79,7 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   }
   diskGradient.addColorStop(1, rgba(blue, 0.04))
   context.strokeStyle = diskGradient
-  context.lineWidth = scale * 0.06
+  context.lineWidth = scale * (0.025 + config.diskThickness * 0.35)
   context.filter = `blur(${Math.max(2, scale * 0.007)}px)`
   context.beginPath()
   context.ellipse(0, 0, diskWidth, diskHeight, 0, 0, Math.PI * 2)
@@ -93,6 +93,22 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   context.restore()
 
   const shadowRadius = scale * (0.11 + config.spin * 0.015)
+  if (config.jetStrength > 0) {
+    context.save()
+    context.translate(centerX, centerY)
+    context.rotate(orbit)
+    context.strokeStyle = rgba(blue, 0.15 + config.jetStrength * 0.55)
+    context.lineWidth = scale * 0.01
+    context.filter = `blur(${scale * 0.006}px)`
+    context.beginPath()
+    context.moveTo(0, -shadowRadius * 0.6)
+    context.lineTo(0, -scale * (0.12 + config.jetStrength * 0.35))
+    context.moveTo(0, shadowRadius * 0.6)
+    context.lineTo(0, scale * (0.12 + config.jetStrength * 0.35))
+    context.stroke()
+    context.restore()
+  }
+
   const lens = context.createRadialGradient(centerX, centerY, shadowRadius * 0.8, centerX, centerY, shadowRadius * 1.6)
   lens.addColorStop(0, '#000000')
   lens.addColorStop(0.7, '#000000')

@@ -5,6 +5,7 @@ import { renderScene } from './sceneRenderer'
 
 function App() {
   const [config, setConfig] = useState<SceneConfig>(defaultSceneConfig)
+  const [controlsPage, setControlsPage] = useState<'basic' | 'nerds'>('basic')
   const [isExporting, setIsExporting] = useState(false)
   const previewRef = useRef<HTMLCanvasElement>(null)
 
@@ -42,7 +43,12 @@ function App() {
       <p className="tagline">Generative black-hole scenes, grounded in relativity.</p>
       <section className="studio">
         <div className="controls panel">
-          <h2>Scene controls</h2>
+          <div className="tabs">
+            <button type="button" className={controlsPage === 'basic' ? 'active' : ''} onClick={() => setControlsPage('basic')}>Scene</button>
+            <button type="button" className={controlsPage === 'nerds' ? 'active' : ''} onClick={() => setControlsPage('nerds')}>For nerds</button>
+          </div>
+          <h2>{controlsPage === 'basic' ? 'Scene controls' : 'Model controls'}</h2>
+          {controlsPage === 'basic' ? <>
           <label>Spin <output>{config.spin.toFixed(3)}</output>
             <input type="range" min="0" max="0.998" step="0.001" value={config.spin} onChange={(event) => update('spin', Number(event.target.value))} />
           </label>
@@ -65,6 +71,31 @@ function App() {
           <button type="button" onClick={downloadWallpapers} disabled={isExporting}>
             {isExporting ? 'Generating…' : 'Download both wallpapers'}
           </button>
+          </> : <>
+          <p className="nerd-note">Fast-preview proxies. GR ray tracing will make these reference-quality.</p>
+          <label>Inner disk radius <output>{config.innerDiskRadius} r₍g₎</output>
+            <input type="range" min="1" max="20" value={config.innerDiskRadius} onChange={(event) => update('innerDiskRadius', Number(event.target.value))} />
+          </label>
+          <label>Emissivity slope <output>{config.emissivitySlope.toFixed(1)}</output>
+            <input type="range" min="1" max="5" step="0.1" value={config.emissivitySlope} onChange={(event) => update('emissivitySlope', Number(event.target.value))} />
+          </label>
+          <label>Disk thickness H/R <output>{config.diskThickness.toFixed(2)}</output>
+            <input type="range" min="0.02" max="0.5" step="0.01" value={config.diskThickness} onChange={(event) => update('diskThickness', Number(event.target.value))} />
+          </label>
+          <label>Flow direction
+            <select value={config.flowDirection} onChange={(event) => update('flowDirection', event.target.value as SceneConfig['flowDirection'])}><option value="prograde">Prograde</option><option value="retrograde">Retrograde</option></select>
+          </label>
+          <label>Magnetic state
+            <select value={config.magneticState} onChange={(event) => update('magneticState', event.target.value as SceneConfig['magneticState'])}><option value="sane">SANE</option><option value="mad">MAD</option></select>
+          </label>
+          <label>Jet strength <output>{config.jetStrength.toFixed(1)}</output>
+            <input type="range" min="0" max="1" step="0.1" value={config.jetStrength} onChange={(event) => update('jetStrength', Number(event.target.value))} />
+          </label>
+          <label>Observing band
+            <select value={config.observingBand} onChange={(event) => update('observingBand', event.target.value as SceneConfig['observingBand'])}><option value="230-ghz">230 GHz (EHT-like)</option><option value="optical">Optical visualization</option></select>
+          </label>
+          <p className="nerd-note">Magnetic state and observing band are saved with the scene but do not alter this fast preview yet.</p>
+          </>}
         </div>
         <div className="preview panel">
           <canvas ref={previewRef} width="1400" height="700" aria-label="Black-hole scene preview" />
