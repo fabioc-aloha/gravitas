@@ -27,12 +27,11 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   const background = style.getPropertyValue('--cp-bg').trim()
   const rand = random(config.seed)
   const centerX = width * 0.52
-  const centerY = height * (0.5 - config.pitchDegrees / 720)
+  const centerY = height * 0.5
   const scale = Math.min(width, height)
-  const diskInclination = config.diskInclinationDegrees * Math.PI / 180
-  const blackHoleInclination = config.blackHoleInclinationDegrees * Math.PI / 180
+  const axisInclination = config.axisInclinationDegrees * Math.PI / 180
   const orbit = config.orbitDegrees * Math.PI / 180
-  const diskHeight = Math.max(scale * 0.035, Math.cos(diskInclination) * scale * 0.14)
+  const diskHeight = Math.max(scale * 0.035, Math.cos(axisInclination) * scale * 0.14)
   const diskWidth = scale * 0.35
   const blue = config.blueSpectrum ? '#4da6ff' : accent
 
@@ -59,7 +58,7 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
 
   context.save()
   context.translate(centerX, centerY)
-  context.rotate(diskInclination * 0.15 + orbit * 0.06)
+  context.rotate(axisInclination * 0.15 + orbit * 0.06)
   const temperature = Math.min(1, config.diskTemperature / 100_000_000)
   const approachingSide = Math.cos(orbit) >= 0 ? 1 : -1
   const diskGradient = context.createLinearGradient(-diskWidth, 0, diskWidth, 0)
@@ -100,7 +99,7 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
 
   context.save()
   context.translate(centerX, centerY)
-  context.scale(1, 1 - Math.sin(blackHoleInclination) * 0.08)
+  context.scale(1, 1 - Math.sin(axisInclination) * 0.08)
   context.fillStyle = '#000000'
   context.beginPath()
   context.arc(0, 0, shadowRadius, 0, Math.PI * 2)

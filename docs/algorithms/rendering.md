@@ -3,7 +3,7 @@
 ## Pipeline
 
 1. Load and validate render configuration.
-2. Create a camera basis from yaw, pitch, roll, inclination, field of view, and observer distance.
+2. Create a camera basis from shared spin/disk-axis inclination, observer orbit, field of view, and observer distance.
 3. Load/crop the selected cosmic background independently for each target aspect ratio.
 4. For every output pixel, trace a backwards ray from camera through the Kerr scene.
 5. Classify the ray as horizon capture, disk intersection, or background escape.
@@ -47,4 +47,4 @@ For the high-fidelity path, determine the Kerr critical curve using spherical ph
 
 ## Perspective
 
-Apply yaw, pitch, and roll before transforming the ray to the black-hole frame. Inclination remains a physical disk-observer angle; camera pitch changes the visual composition. The UI must expose both rather than treating them as interchangeable.
+The MVP uses one shared spin/disk-axis inclination and one observer-orbit angle. This keeps the disk and black hole in one physically coherent frame. Independent disk-versus-spin tilts belong to an advanced warped/precessing-disk model and are intentionally deferred.
