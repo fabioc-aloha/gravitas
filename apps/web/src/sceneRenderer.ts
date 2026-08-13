@@ -26,11 +26,13 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   const text = style.getPropertyValue('--cp-text').trim()
   const background = style.getPropertyValue('--cp-bg').trim()
   const rand = random(config.seed)
-  const centerX = width * (0.52 + config.yawDegrees / 720)
+  const centerX = width * 0.52
   const centerY = height * (0.5 - config.pitchDegrees / 720)
   const scale = Math.min(width, height)
-  const inclination = config.inclinationDegrees * Math.PI / 180
-  const diskHeight = Math.max(scale * 0.035, Math.cos(inclination) * scale * 0.14)
+  const diskInclination = config.diskInclinationDegrees * Math.PI / 180
+  const blackHoleInclination = config.blackHoleInclinationDegrees * Math.PI / 180
+  const orbit = config.orbitDegrees * Math.PI / 180
+  const diskHeight = Math.max(scale * 0.035, Math.cos(diskInclination) * scale * 0.14)
   const diskWidth = scale * 0.35
   const blue = config.blueSpectrum ? '#4da6ff' : accent
 
@@ -57,9 +59,9 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
 
   context.save()
   context.translate(centerX, centerY)
-  context.rotate(inclination * 0.15)
+  context.rotate(diskInclination * 0.15 + orbit * 0.06)
   const temperature = Math.min(1, config.diskTemperature / 100_000_000)
-  const approachingSide = config.yawDegrees >= 0 ? 1 : -1
+  const approachingSide = Math.cos(orbit) >= 0 ? 1 : -1
   const diskGradient = context.createLinearGradient(-diskWidth, 0, diskWidth, 0)
   diskGradient.addColorStop(0, rgba(blue, 0.04))
   diskGradient.addColorStop(0.26, rgba(blue, 0.35))
@@ -96,14 +98,18 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   context.arc(centerX, centerY, shadowRadius * 1.6, 0, Math.PI * 2)
   context.fill()
 
+  context.save()
+  context.translate(centerX, centerY)
+  context.scale(1, 1 - Math.sin(blackHoleInclination) * 0.08)
   context.fillStyle = '#000000'
   context.beginPath()
-  context.arc(centerX, centerY, shadowRadius, 0, Math.PI * 2)
+  context.arc(0, 0, shadowRadius, 0, Math.PI * 2)
   context.fill()
 
   context.strokeStyle = rgba(blue, 0.55)
   context.lineWidth = Math.max(1, scale * 0.002)
   context.beginPath()
-  context.arc(centerX, centerY, shadowRadius * 1.1, 0, Math.PI * 2)
+  context.arc(0, 0, shadowRadius * 1.1, 0, Math.PI * 2)
   context.stroke()
+  context.restore()
 }

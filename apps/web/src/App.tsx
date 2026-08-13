@@ -46,11 +46,14 @@ function App() {
           <label>Spin <output>{config.spin.toFixed(3)}</output>
             <input type="range" min="0" max="0.998" step="0.001" value={config.spin} onChange={(event) => update('spin', Number(event.target.value))} />
           </label>
-          <label>Inclination <output>{config.inclinationDegrees}°</output>
-            <input type="range" min="0" max="85" value={config.inclinationDegrees} onChange={(event) => update('inclinationDegrees', Number(event.target.value))} />
+          <label>Disk inclination <output>{config.diskInclinationDegrees}°</output>
+            <input type="range" min="0" max="85" value={config.diskInclinationDegrees} onChange={(event) => update('diskInclinationDegrees', Number(event.target.value))} />
           </label>
-          <label>Camera yaw <output>{config.yawDegrees}°</output>
-            <input type="range" min="-180" max="180" value={config.yawDegrees} onChange={(event) => update('yawDegrees', Number(event.target.value))} />
+          <label>Black-hole inclination <output>{config.blackHoleInclinationDegrees}°</output>
+            <input type="range" min="0" max="85" value={config.blackHoleInclinationDegrees} onChange={(event) => update('blackHoleInclinationDegrees', Number(event.target.value))} />
+          </label>
+          <label>Orbit around black hole <output>{config.orbitDegrees}°</output>
+            <input type="range" min="0" max="360" value={config.orbitDegrees} onChange={(event) => update('orbitDegrees', Number(event.target.value))} />
           </label>
           <label>Camera pitch <output>{config.pitchDegrees}°</output>
             <input type="range" min="-45" max="45" value={config.pitchDegrees} onChange={(event) => update('pitchDegrees', Number(event.target.value))} />
