@@ -52,6 +52,9 @@ function App() {
           <label>Orbit around black hole <output>{config.orbitDegrees}°</output>
             <input type="range" min="0" max="360" value={config.orbitDegrees} onChange={(event) => update('orbitDegrees', Number(event.target.value))} />
           </label>
+          <label>Zoom <output>{config.zoom.toFixed(1)}×</output>
+            <input type="range" min="0.5" max="3" step="0.1" value={config.zoom} onChange={(event) => update('zoom', Number(event.target.value))} />
+          </label>
           <label>Disk temperature <output>{(config.diskTemperature / 1_000_000).toFixed(0)}M K</output>
             <input type="range" min="1000000" max="100000000" step="1000000" value={config.diskTemperature} onChange={(event) => update('diskTemperature', Number(event.target.value))} />
           </label>

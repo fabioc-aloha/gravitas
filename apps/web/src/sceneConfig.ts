@@ -6,6 +6,7 @@ export type SceneConfig = {
   orbitDegrees: number
   seed: number
   spin: number
+  zoom: number
 }
 
 export const defaultSceneConfig: SceneConfig = {
@@ -16,6 +17,7 @@ export const defaultSceneConfig: SceneConfig = {
   orbitDegrees: 0,
   seed: 42,
   spin: 0.7,
+  zoom: 1,
 }
 
 export const outputSizes = [
@@ -30,6 +32,9 @@ export function createRenderPlan(config: SceneConfig) {
   }
   if (config.diskTemperature < 1_000 || config.diskTemperature > 100_000_000) {
     throw new RangeError('Disk temperature must be from 1,000 K to 100,000,000 K.')
+  }
+  if (config.zoom < 0.5 || config.zoom > 3) {
+    throw new RangeError('Zoom must be from 0.5 to 3.')
   }
 
   return { config, outputs: [...outputSizes] }

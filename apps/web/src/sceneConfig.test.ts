@@ -7,6 +7,7 @@ describe('createRenderPlan', () => {
     expect(defaultSceneConfig).toMatchObject({
       axisInclinationDegrees: 30,
       orbitDegrees: 0,
+      zoom: 1,
     })
   })
 

@@ -28,7 +28,7 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   const rand = random(config.seed)
   const centerX = width * 0.52
   const centerY = height * 0.5
-  const scale = Math.min(width, height)
+  const scale = Math.min(width, height) * config.zoom
   const axisInclination = config.axisInclinationDegrees * Math.PI / 180
   const orbit = config.orbitDegrees * Math.PI / 180
   const diskHeight = Math.max(scale * 0.035, Math.cos(axisInclination) * scale * 0.14)
