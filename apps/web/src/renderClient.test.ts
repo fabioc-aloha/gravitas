@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { defaultSceneConfig } from './sceneConfig'
-import { renderOutputLabel, requestWallpapers, toRenderRequest } from './renderClient'
+import { fetchRenderFile, renderOutputLabel, requestWallpapers, toRenderRequest } from './renderClient'
 
 describe('requestWallpapers', () => {
   it('submits every scene control and polls until API download URLs are ready', async () => {
@@ -81,5 +81,26 @@ describe('requestWallpapers', () => {
       .toBe('Download 5120×1440')
     expect(renderOutputLabel('https://api/renders/job/files/gravitas-job-3440x1440.png'))
       .toBe('Download 3440×1440')
+  })
+
+  it('fetches a private proxy render into a locally downloadable blob', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(
+      new Blob(['png bytes'], { type: 'image/png' }),
+      {
+        headers: {
+          'Content-Disposition': 'attachment; filename="gravitas-job-5120x1440.png"',
+          'Content-Type': 'image/png',
+        },
+      },
+    ))
+
+    const file = await fetchRenderFile(
+      'https://api/renders/job/files/gravitas-job-5120x1440.png',
+      fetcher,
+    )
+
+    expect(file.filename).toBe('gravitas-job-5120x1440.png')
+    expect(file.blob.type).toBe('image/png')
+    expect(await file.blob.text()).toBe('png bytes')
   })
 })

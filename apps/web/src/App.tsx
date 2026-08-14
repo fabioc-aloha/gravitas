@@ -4,7 +4,7 @@ import 'katex/dist/katex.min.css'
 
 import { defaultSceneConfig, outputSizes, type SceneConfig } from './sceneConfig'
 import { buildModelFormulas } from './formulas'
-import { renderOutputLabel, requestWallpapers, type RenderStage } from './renderClient'
+import { fetchRenderFile, renderOutputLabel, requestWallpapers, type RenderStage } from './renderClient'
 import { renderScene } from './sceneRenderer'
 
 function App() {
@@ -35,6 +35,25 @@ function App() {
       setRenderError(error instanceof Error ? error.message : 'Could not create the server render.')
     } finally {
       setIsExporting(false)
+    }
+
+  }
+
+  async function downloadRenderedFile(event: React.MouseEvent<HTMLAnchorElement>, url: string) {
+    event.preventDefault()
+    setRenderError(null)
+    try {
+      const file = await fetchRenderFile(url)
+      const objectUrl = URL.createObjectURL(file.blob)
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.download = file.filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (error) {
+      setRenderError(error instanceof Error ? error.message : 'Could not download the rendered wallpaper.')
     }
   }
 
@@ -75,7 +94,7 @@ function App() {
           </button>
           {downloadUrls.length > 0 && <div className="download-links" role="status">
             <strong>Render complete</strong>
-            {downloadUrls.map((url) => <a key={url} href={url}>{renderOutputLabel(url)}</a>)}
+            {downloadUrls.map((url) => <a key={url} href={url} onClick={(event) => void downloadRenderedFile(event, url)}>{renderOutputLabel(url)}</a>)}
           </div>}
           {renderError && <p role="alert">{renderError}</p>}
           </> : <>

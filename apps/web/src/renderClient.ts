@@ -36,6 +36,21 @@ export function renderOutputLabel(url: string): string {
   return match ? `Download ${match[1]}×${match[2]}` : 'Download wallpaper'
 }
 
+export async function fetchRenderFile(
+  url: string,
+  fetcher: Fetch = fetch,
+): Promise<{ blob: Blob; filename: string }> {
+  const response = await fetcher(url)
+  if (!response.ok) throw new Error('Could not download the rendered wallpaper.')
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const filenameMatch = disposition.match(/filename="([^"]+)"/)
+  const fallbackName = new URL(url).pathname.split('/').at(-1) ?? 'gravitas-wallpaper.png'
+  return {
+    blob: await response.blob(),
+    filename: filenameMatch?.[1] ?? fallbackName,
+  }
+}
+
 export function toRenderRequest(config: SceneConfig): RenderRequest {
   return {
     axis_inclination_degrees: config.axisInclinationDegrees,
