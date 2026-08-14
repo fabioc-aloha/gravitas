@@ -1,0 +1,107 @@
+name: Deploy and test Azure
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: gravitas-azure-test
+  cancel-in-progress: false
+
+env:
+  API_APP_NAME: ca-gravitas-api
+  API_URL: https://ca-gravitas-api.ashypebble-8202f9e4.eastus.azurecontainerapps.io
+  ACR_NAME: acrgravitas434092
+  ACR_SERVER: acrgravitas434092.azurecr.io
+  RESOURCE_GROUP: rg-gravitas
+  WEB_URL: https://orange-wave-0893cf10f.7.azurestaticapps.net
+  WORKER_APP_NAME: ca-gravitas-worker
+
+jobs:
+  deploy-and-test:
+    name: Deploy and test the live stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: azure-test
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build API image in Azure Container Registry
+        run: >-
+          az acr build
+          --registry "$ACR_NAME"
+          --image "gravitas-api:${GITHUB_SHA}"
+          --file services/render-api/Dockerfile
+          .
+
+      - name: Build worker image in Azure Container Registry
+        run: >-
+          az acr build
+          --registry "$ACR_NAME"
+          --image "gravitas-worker:${GITHUB_SHA}"
+          --file services/render-worker/Dockerfile
+          .
+
+      - name: Deploy API revision
+        run: >-
+          az containerapp update
+          --name "$API_APP_NAME"
+          --resource-group "$RESOURCE_GROUP"
+          --image "$ACR_SERVER/gravitas-api:${GITHUB_SHA}"
+          --output none
+
+      - name: Deploy worker revision
+        run: >-
+          az containerapp update
+          --name "$WORKER_APP_NAME"
+          --resource-group "$RESOURCE_GROUP"
+          --image "$ACR_SERVER/gravitas-worker:${GITHUB_SHA}"
+          --output none
+
+      - name: Verify deployed container images
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_image=$(az containerapp show --name "$API_APP_NAME" --resource-group "$RESOURCE_GROUP" --query 'properties.template.containers[0].image' --output tsv)
+          worker_image=$(az containerapp show --name "$WORKER_APP_NAME" --resource-group "$RESOURCE_GROUP" --query 'properties.template.containers[0].image' --output tsv)
+          test "$api_image" = "$ACR_SERVER/gravitas-api:${GITHUB_SHA}"
+          test "$worker_image" = "$ACR_SERVER/gravitas-worker:${GITHUB_SHA}"
+
+      - name: Build web app with the deployed API URL
+        working-directory: apps/web
+        env:
+          VITE_RENDER_API_URL: ${{ env.API_URL }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy Azure Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          action: upload
+          app_location: apps/web/dist
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          output_location: ""
+          skip_app_build: true
+
+      - name: Test the deployed environment
+        run: >-
+          python scripts/test_live_environment.py
+          --web-url "$WEB_URL"
+          --api-url "$API_URL"
+          --timeout-seconds 900

@@ -11,7 +11,7 @@ Gravitas generates scientifically informed black-hole wallpapers for Douglas. It
 Every completed render exports both target monitor sizes:
 
 | Format | Resolution | Aspect ratio |
-|---|---:|---:|
+| --- | ---: | ---: |
 | Super ultrawide | 5120×1440 | 32:9 |
 | Ultrawide | 3440×1440 | 43:18 |
 
@@ -70,7 +70,7 @@ filename, then streams the private blob as an attachment.
 Set these variables on both deployed services:
 
 | Variable | API | Worker | Purpose |
-|---|:---:|:---:|---|
+| --- | :---: | :---: | --- |
 | `AZURE_STORAGE_CONNECTION_STRING` | yes | yes | Existing Storage account connection string |
 | `RENDER_QUEUE_NAME` | yes | yes | Existing Azure Queue carrying UUID job IDs |
 | `RENDER_BLOB_CONTAINER` | yes | yes | Existing private Blob container for job JSON, metadata, and PNGs |
@@ -101,6 +101,8 @@ The blue palette requested for Douglas is a selectable color mapping. Physically
 
 ## Documentation
 
+- [Delivery tracker](TRACKER.md)
+- [Azure CI/CD](docs/azure-cicd.md)
 - [Requirements](docs/requirements.md)
 - [Research sources and validation](docs/research/sources.md)
 - [Rendering algorithms](docs/algorithms/rendering.md)
