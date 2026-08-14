@@ -45,6 +45,7 @@ The blue palette requested for Douglas is a selectable color mapping. Physically
 - [Requirements](docs/requirements.md)
 - [Research sources and validation](docs/research/sources.md)
 - [Rendering algorithms](docs/algorithms/rendering.md)
+- [Schwarzschild raster baseline](docs/algorithms/schwarzschild-baseline.md)
 - [Azure implementation plan](docs/plans/2026-08-13-azure-web-app.md)
 - [Feature priorities](docs/feature-priorities.md)
 
