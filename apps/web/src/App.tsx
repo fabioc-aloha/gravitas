@@ -4,7 +4,7 @@ import 'katex/dist/katex.min.css'
 
 import { defaultSceneConfig, outputSizes, type SceneConfig } from './sceneConfig'
 import { buildModelFormulas } from './formulas'
-import { requestWallpapers, type RenderStage } from './renderClient'
+import { renderOutputLabel, requestWallpapers, type RenderStage } from './renderClient'
 import { renderScene } from './sceneRenderer'
 
 function App() {
@@ -13,6 +13,7 @@ function App() {
   const [isExporting, setIsExporting] = useState(false)
   const [renderStage, setRenderStage] = useState<RenderStage | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
+  const [downloadUrls, setDownloadUrls] = useState<string[]>([])
   const previewRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -26,14 +27,10 @@ function App() {
   async function downloadWallpapers() {
     setIsExporting(true)
     setRenderError(null)
+    setDownloadUrls([])
     try {
       const urls = await requestWallpapers(config, setRenderStage)
-      for (const url of urls) {
-        const link = document.createElement('a')
-        link.href = url
-        link.download = ''
-        link.click()
-      }
+      setDownloadUrls(urls)
     } catch (error) {
       setRenderError(error instanceof Error ? error.message : 'Could not create the server render.')
     } finally {
@@ -74,8 +71,12 @@ function App() {
             Blue-spectrum visualization
           </label>
           <button type="button" onClick={downloadWallpapers} disabled={isExporting}>
-            {isExporting ? `${renderStage ?? 'queued'} server render…` : 'Download both wallpapers'}
+            {isExporting ? `${renderStage ?? 'queued'} server render…` : 'Generate both wallpapers'}
           </button>
+          {downloadUrls.length > 0 && <div className="download-links" role="status">
+            <strong>Render complete</strong>
+            {downloadUrls.map((url) => <a key={url} href={url}>{renderOutputLabel(url)}</a>)}
+          </div>}
           {renderError && <p role="alert">{renderError}</p>}
           </> : <>
           <p className="nerd-note">Fast-preview proxies. GR ray tracing will make these reference-quality.</p>

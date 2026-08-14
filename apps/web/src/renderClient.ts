@@ -31,6 +31,11 @@ type Fetch = typeof fetch
 
 const renderApiUrl = import.meta.env.VITE_RENDER_API_URL
 
+export function renderOutputLabel(url: string): string {
+  const match = url.match(/-(\d+)x(\d+)\.png(?:$|\?)/)
+  return match ? `Download ${match[1]}×${match[2]}` : 'Download wallpaper'
+}
+
 export function toRenderRequest(config: SceneConfig): RenderRequest {
   return {
     axis_inclination_degrees: config.axisInclinationDegrees,

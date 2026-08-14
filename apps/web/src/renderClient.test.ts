@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { defaultSceneConfig } from './sceneConfig'
-import { requestWallpapers, toRenderRequest } from './renderClient'
+import { renderOutputLabel, requestWallpapers, toRenderRequest } from './renderClient'
 
 describe('requestWallpapers', () => {
   it('submits every scene control and polls until API download URLs are ready', async () => {
@@ -74,5 +74,12 @@ describe('requestWallpapers', () => {
     })
     expect(second).not.toHaveProperty('field_of_view')
     expect(Object.keys(second)).toHaveLength(16)
+  })
+
+  it('labels each explicit output link by its rendered dimensions', () => {
+    expect(renderOutputLabel('https://api/renders/job/files/gravitas-job-5120x1440.png'))
+      .toBe('Download 5120×1440')
+    expect(renderOutputLabel('https://api/renders/job/files/gravitas-job-3440x1440.png'))
+      .toBe('Download 3440×1440')
   })
 })
