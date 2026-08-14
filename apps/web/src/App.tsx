@@ -40,7 +40,7 @@ function App() {
   }
 
   return (
-    <main>
+    <main className={controlsPage === 'nerds' ? 'nerds-layout' : undefined}>
       <p className="eyebrow">Scientific cosmic generator</p>
       <h1>Gravitas</h1>
       <p className="tagline">Generative black-hole scenes, grounded in relativity.</p>
