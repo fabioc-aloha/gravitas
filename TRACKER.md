@@ -18,14 +18,14 @@
 
 | Area | Status | Evidence verified 2026-08-14 |
 | --- | --- | --- |
-| Source | Healthy | `main` matched `origin/main` before this audit; tracker documentation is currently uncommitted |
+| Source | Healthy | CI/CD implementation and audit evidence are committed on `main` |
 | Web quality gates | Healthy | 12 tests passed; lint and production build passed |
 | Render API quality gates | Healthy | 21 tests passed |
 | Render worker quality gates | Healthy | 15 tests passed |
-| Static Web App | Running | `swa-gravitas-434092`; production environment Ready |
-| Render API | Running | `ca-gravitas-api`; latest ready revision `0000005` |
-| Render worker | Running | `ca-gravitas-worker`; latest ready revision `0000005` |
-| Deployment automation | In progress | Azure deployment and live test workflow is tracked; GitHub OIDC and SWA credentials still require activation |
+| Static Web App | Running | `swa-gravitas-434092`; default environment Ready at 2026-08-14 22:15 UTC |
+| Render API | Running | `ca-gravitas-api`; tested revision `0000006` Ready |
+| Render worker | Running | `ca-gravitas-worker`; tested revision `0000006` Ready |
+| Deployment automation | Healthy | GitHub Actions run `31845522738`, attempt 2, deployed commit `3e4aeca` and passed the live Azure render gate |
 | Infrastructure as code | At risk | [infra/main.bicep](infra/main.bicep) defines storage only; live Azure resources extend beyond it |
 
 ## Delivered
@@ -54,7 +54,7 @@
 | G-005 | P1 | Expose metadata through the API and web app | Not started | Completed API responses return PNG URLs only; `metadata_blob_name` remains internal | Completed jobs return an authenticated metadata URL and the web app offers it beside both PNGs |
 | G-006 | P1 | Make control effects honest end to end | Partial | Disk thickness is accepted but does not affect preview or server output; jet strength is preview-only; magnetic state and observing band are provenance-only | Each control is implemented for its declared mode or visibly disabled/labeled as provenance-only in both preview and export UI |
 | G-007 | P1 | Bound client polling and support recovery | Not started | [apps/web/src/renderClient.ts](apps/web/src/renderClient.ts) polls indefinitely while a job remains queued or rendering | Polling has timeout/cancellation, bounded backoff, and a recoverable job URL or identifier; timeout and cancellation tests pass |
-| G-008 | P1 | Add end-to-end deployment verification | Partial | [scripts/test_live_environment.py](scripts/test_live_environment.py) passed against Azure on 2026-08-14 and is wired after deployment; metadata download remains outside the current API contract | CI runs a deployed-environment smoke test that verifies submit, status, metadata, both dimensions, and download |
+| G-008 | P1 | Add end-to-end deployment verification | Partial | [.github/workflows/deploy-and-test.yml](.github/workflows/deploy-and-test.yml) passed submit, status, both dimensions, and download against Azure in run `31845522738`; metadata download remains outside the current API contract | CI runs a deployed-environment smoke test that verifies submit, status, metadata, both dimensions, and download |
 
 ## Product Requirement Gaps
 

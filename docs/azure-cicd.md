@@ -21,13 +21,14 @@ The workflow uses a GitHub environment named `azure-test` and requires these env
 | `AZURE_SUBSCRIPTION_ID` | Subscription containing `rg-gravitas` |
 | `AZURE_STATIC_WEB_APPS_API_TOKEN` | Deployment token for `swa-gravitas-434092` |
 
-The federated credential subject must be exactly:
+Read the repository's current OIDC subject prefix before creating the federated credential:
 
-```text
-repo:fabioc-aloha/gravitas:environment:azure-test
+```powershell
+$prefix = gh api repos/fabioc-aloha/gravitas/actions/oidc/customization/sub --jq .sub_claim_prefix
+$subject = "$prefix`:environment:azure-test"
 ```
 
-Scope the deployment identity to `rg-gravitas`. Do not use a client secret; `azure/login` exchanges GitHub's short-lived identity token through OIDC.
+Use `$subject` exactly. GitHub may issue an immutable owner/repository-ID prefix rather than the legacy name-only prefix, and Azure requires an exact match. Scope the deployment identity to `rg-gravitas`. Do not use a client secret; `azure/login` exchanges GitHub's short-lived identity token through OIDC.
 
 ## Workflow
 
