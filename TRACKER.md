@@ -23,19 +23,18 @@
 | Render API quality gates | Healthy | 21 tests passed |
 | Render worker quality gates | Healthy | 15 tests passed |
 | Static Web App | Running | `swa-gravitas-434092`; default environment Ready at 2026-08-14 22:15 UTC |
-| Render API | Running | `ca-gravitas-api`; tested revision `0000006` Ready |
-| Render worker | Running | `ca-gravitas-worker`; tested revision `0000006` Ready |
-| Deployment automation | Healthy | GitHub Actions run `31845522738`, attempt 2, deployed commit `3e4aeca` and passed the live Azure render gate |
-| Infrastructure as code | In progress | [infra/main.bicep](infra/main.bicep) covers the full stack and compiles cleanly; live pipeline validation is pending |
+| Render API | Running | `ca-gravitas-api`; Bicep-deployed revision `0000007` Ready |
+| Render worker | Running | `ca-gravitas-worker`; Bicep-deployed revision `0000007` Ready |
+| Deployment automation | Healthy | GitHub Actions run `31847313897` deployed commit `4ced3d1` and passed the live Azure render gate |
+| Infrastructure as code | Healthy | Foundation and application Bicep deployments succeeded in run `31847313897`; no resources were replaced |
 
 ## Next Up
 
 | Order | Work item | Why now | First verifiable outcome |
 | ---: | --- | --- | --- |
 | 1 | G-002: Bound public render-job creation | The public endpoint can create unmetered Azure work; this is the largest release risk | A live Azure test proves unknown origins and over-quota submissions are rejected while the deployed web app can still render |
-| 2 | G-001: Reproduce the Azure stack from Bicep | The full stack is modeled and integrated into CI; it still needs live deployment proof | The Azure pipeline deploys foundation and applications from Bicep, then passes the real render gate without resource replacement |
-| 3 | G-004 and G-005: Complete and expose provenance | PNGs are trustworthy only when their metadata travels with them | The live test downloads metadata and verifies source, credit, crop, algorithm, seed, preset, and render date |
-| 4 | G-009: Split MVP requirements from reference-render goals | Current requirements mix delivered fast-render behavior with future Kerr behavior | Every MVP requirement maps to a deployed control, contract field, worker effect or explicit provenance-only label, and live assertion |
+| 2 | G-004 and G-005: Complete and expose provenance | PNGs are trustworthy only when their metadata travels with them | The live test downloads metadata and verifies source, credit, crop, algorithm, seed, preset, and render date |
+| 3 | G-009: Split MVP requirements from reference-render goals | Current requirements mix delivered fast-render behavior with future Kerr behavior | Every MVP requirement maps to a deployed control, contract field, worker effect or explicit provenance-only label, and live assertion |
 
 **Decision needed for G-002**: choose the pre-release access model before implementation. Recommended: Static Web Apps authentication plus API authorization and a per-identity render quota. A temporary shared test token is simpler but weaker and creates secret-distribution debt.
 
@@ -53,7 +52,7 @@
 
 | ID | Priority | Work item | Status | Evidence | Exit criteria |
 | --- | --- | --- | --- | --- | --- |
-| G-001 | P0 | Reproduce the live Azure deployment from source | In progress | [infra/main.bicep](infra/main.bicep) now covers SWA, Container Apps, queue, storage, registry, observability, GitHub OIDC bootstrap, and RBAC; `what-if` shows no create/delete/replace; live CI proof is pending | Bicep covers the full environment and CI deploys it before the real Azure render gate |
+| G-001 | P0 | Reproduce the live Azure deployment from source | Done | [infra/main.bicep](infra/main.bicep) covers SWA, Container Apps, queue, storage, registry, observability, GitHub OIDC bootstrap, and RBAC; run `31847313897` deployed both phases and passed the real render gate | Bicep covers the full environment and CI deploys it before the real Azure render gate |
 | G-002 | P0 | Bound public render-job creation | Not started | [services/render-api/app/main.py](services/render-api/app/main.py) allows every CORS origin and exposes unauthenticated job creation without rate or quota controls | Allowed origins are explicit; render submission has an intentional authorization model and enforceable rate/quota limits; abuse-path tests pass |
 | G-003 | P1 | Correct the field-of-view contract description | Not started | Runtime preview and API both use `48 / zoom`; [packages/render-schema/render-request.schema.json](packages/render-schema/render-request.schema.json) still says `20 / zoom` | The shared schema documents `48 / zoom`, and deployed contract evidence confirms clients cannot override `field_of_view` |
 
