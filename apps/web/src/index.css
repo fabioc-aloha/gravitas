@@ -86,7 +86,7 @@ select { background: var(--cp-surface); border: 1px solid var(--cp-border); bord
 .formula-panel { align-self: start; }
 .formula-panel section { border-top: 1px solid var(--cp-border); margin-top: 16px; padding-top: 16px; }
 .formula-panel h3 { font-size: .9rem; margin: 0 0 8px; }
-.formula-panel code { background: var(--cp-surface-soft); color: var(--cp-text); display: inline-block; font-family: Consolas, "Courier New", Courier, monospace; font-size: .82rem; padding: 6px 8px; }
+.equation { background: var(--cp-surface-soft); color: var(--cp-text); overflow-x: auto; padding: 8px; }
 .formula-panel section p { color: var(--cp-text-muted); font-size: .82rem; margin-top: 8px; }
 @media (max-width: 1080px) { .studio:has(.formula-panel) { grid-template-columns: 1fr 1fr; } .formula-panel { grid-column: 1 / -1; } }
 @media (max-width: 860px) { main { padding: 48px 20px; } .studio, .studio:has(.formula-panel) { grid-template-columns: 1fr; } .formula-panel { grid-column: auto; } }

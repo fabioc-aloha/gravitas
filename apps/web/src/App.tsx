@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 import { createRenderPlan, defaultSceneConfig, outputSizes, type SceneConfig } from './sceneConfig'
-import { modelFormulas } from './formulas'
+import { buildModelFormulas } from './formulas'
 import { renderScene } from './sceneRenderer'
 
 function App() {
@@ -112,9 +114,9 @@ function App() {
           <p className="eyebrow">Model notebook</p>
           <h2>What the controls mean</h2>
           <p className="nerd-note">Formulas guide the reference model. The fast preview uses labeled visual proxies.</p>
-          {modelFormulas.map((formula) => <section key={formula.title}>
+          {buildModelFormulas(config).map((formula) => <section key={formula.title}>
             <h3>{formula.title}</h3>
-            <code>{formula.expression}</code>
+            <div className="equation" dangerouslySetInnerHTML={{ __html: katex.renderToString(formula.expression, { throwOnError: false }) }} />
             <p>{formula.note}</p>
           </section>)}
         </aside>}
