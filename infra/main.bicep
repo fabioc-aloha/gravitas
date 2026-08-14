@@ -1,34 +1,424 @@
 @description('The Azure region for regional Gravitas services.')
 param location string = resourceGroup().location
 
-@description('The globally unique storage-account name.')
-param storageAccountName string
+@description('The Azure region for the Static Web App.')
+param staticWebAppLocation string = 'eastus2'
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+@description('Deploy the API and worker after their image tag exists in ACR.')
+param deployApps bool = true
+
+@description('Create the GitHub OIDC identity and Contributor assignment during owner-run bootstrap.')
+param bootstrapGithubIdentity bool = false
+
+@description('Immutable GitHub OIDC subject for the azure-test environment.')
+param githubOidcSubject string
+
+@description('Commit SHA or other immutable tag already present in ACR.')
+param imageTag string
+
+@description('Public API origin persisted in completed-job download URLs.')
+param apiPublicBaseUrl string
+
+@description('GitHub repository connected to the Static Web App.')
+param repositoryUrl string = 'https://github.com/fabioc-aloha/gravitas'
+
+@description('GitHub branch connected to the Static Web App.')
+param repositoryBranch string = 'main'
+
+@secure()
+@description('Optional GitHub token used only when initially connecting a newly created Static Web App.')
+param repositoryToken string = ''
+
+param logAnalyticsWorkspaceName string
+param storageAccountName string
+param containerEnvironmentName string
+param staticWebAppName string
+param containerRegistryName string
+param apiContainerAppName string = 'ca-gravitas-api'
+param workerContainerAppName string = 'ca-gravitas-worker'
+param githubIdentityName string = 'id-gravitas-github'
+param githubFederatedCredentialName string = 'github-azure-test'
+param githubContributorRoleAssignmentName string
+param renderQueueName string = 'render-jobs'
+param renderContainerName string = 'renders'
+
+var registryServer = '${containerRegistry.name}.azurecr.io'
+var registryCredentials = containerRegistry.listCredentials()
+var registryPasswordSecretName = '${containerRegistryName}azurecrio-${containerRegistryName}'
+var storageConnectionSecretName = 'storage-connection'
+var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+var contributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+var foundationTags = {
+  environment: 'dev'
+  'managed-by': 'azure-cli'
+  project: 'gravitas'
+}
+var appTags = {
+  environment: 'dev'
+  project: 'gravitas'
+}
+
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-07-01' = {
+  name: logAnalyticsWorkspaceName
+  location: location
+  tags: foundationTags
+  properties: {
+    features: {
+      enableLogAccessUsingOnlyResourcePermissions: true
+    }
+    publicNetworkAccessForIngestion: 'Enabled'
+    publicNetworkAccessForQuery: 'Enabled'
+    retentionInDays: 30
+    sku: {
+      name: 'PerGB2018'
+    }
+  }
+}
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2026-04-01' = {
   name: storageAccountName
   location: location
+  tags: foundationTags
   sku: {
     name: 'Standard_LRS'
   }
   kind: 'StorageV2'
   properties: {
+    accessTier: 'Hot'
     allowBlobPublicAccess: false
+    allowCrossTenantReplication: false
     minimumTlsVersion: 'TLS1_2'
+    networkAcls: {
+      bypass: 'None'
+      defaultAction: 'Allow'
+      ipRules: []
+      virtualNetworkRules: []
+    }
+    supportsHttpsTrafficOnly: true
   }
 }
 
-resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2026-04-01' = {
   parent: storageAccount
   name: 'default'
+  properties: {
+    deleteRetentionPolicy: {
+      allowPermanentDelete: false
+      enabled: false
+    }
+    staticWebsite: {
+      enabled: false
+    }
+  }
 }
 
-resource renders 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+resource renders 'Microsoft.Storage/storageAccounts/blobServices/containers@2026-04-01' = {
   parent: blobService
-  name: 'renders'
+  name: renderContainerName
   properties: {
+    defaultEncryptionScope: '$account-encryption-key'
+    denyEncryptionScopeOverride: false
     publicAccess: 'None'
   }
 }
 
-output storageAccountId string = storageAccount.id
-output rendersContainerId string = renders.id
+resource queueService 'Microsoft.Storage/storageAccounts/queueServices@2026-04-01' = {
+  parent: storageAccount
+  name: 'default'
+}
+
+resource renderQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2026-04-01' = {
+  parent: queueService
+  name: renderQueueName
+}
+
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2026-01-01-preview' = {
+  name: containerRegistryName
+  location: location
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: true
+    anonymousPullEnabled: false
+    autoGeneratedDomainNameLabelScope: 'Unsecure'
+    dataEndpointEnabled: false
+    encryption: {
+      status: 'disabled'
+    }
+    endpointProtocol: 'IPv4'
+    metadataSearch: 'Disabled'
+    networkRuleBypassAllowedForTasks: false
+    networkRuleBypassOptions: 'AzureServices'
+    policies: {
+      azureADAuthenticationAsArmPolicy: {
+        status: 'enabled'
+      }
+      exportPolicy: {
+        status: 'enabled'
+      }
+      quarantinePolicy: {
+        status: 'disabled'
+      }
+      retentionPolicy: {
+        days: 7
+        status: 'disabled'
+      }
+      softDeletePolicy: {
+        retentionDays: 7
+        status: 'disabled'
+      }
+      trustPolicy: {
+        status: 'disabled'
+        type: 'Notary'
+      }
+    }
+    publicNetworkAccess: 'Enabled'
+    regionalEndpoints: 'Disabled'
+    roleAssignmentMode: 'LegacyRegistryPermissions'
+    zoneRedundancy: 'Disabled'
+  }
+}
+
+resource containerEnvironment 'Microsoft.App/managedEnvironments@2026-01-01' = {
+  name: containerEnvironmentName
+  location: location
+  tags: foundationTags
+  properties: {
+    appLogsConfiguration: {
+      destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalyticsWorkspace.properties.customerId
+        sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
+      }
+    }
+    peerAuthentication: {
+      mtls: {
+        enabled: false
+      }
+    }
+    peerTrafficConfiguration: {
+      encryption: {
+        enabled: false
+      }
+    }
+    publicNetworkAccess: 'Enabled'
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
+    zoneRedundant: false
+  }
+}
+
+resource staticWebApp 'Microsoft.Web/staticSites@2024-11-01' = {
+  name: staticWebAppName
+  location: staticWebAppLocation
+  tags: foundationTags
+  sku: {
+    name: 'Standard'
+    tier: 'Standard'
+  }
+  properties: union({
+    allowConfigFileUpdates: true
+    branch: repositoryBranch
+    enterpriseGradeCdnStatus: 'Disabled'
+    provider: 'GitHub'
+    repositoryUrl: repositoryUrl
+    stagingEnvironmentPolicy: 'Enabled'
+  }, empty(repositoryToken) ? {} : {
+    repositoryToken: repositoryToken
+  })
+}
+
+resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = if (deployApps) {
+  name: apiContainerAppName
+  location: location
+  tags: appTags
+  properties: {
+    configuration: {
+      activeRevisionsMode: 'Single'
+      ingress: {
+        allowInsecure: false
+        exposedPort: 0
+        external: true
+        targetPort: 8000
+        traffic: [
+          {
+            latestRevision: true
+            weight: 100
+          }
+        ]
+        transport: 'Auto'
+      }
+      maxInactiveRevisions: 100
+      registries: [
+        {
+          passwordSecretRef: registryPasswordSecretName
+          server: registryServer
+          username: containerRegistryName
+        }
+      ]
+      secrets: [
+        {
+          name: storageConnectionSecretName
+          value: storageConnectionString
+        }
+        {
+          name: registryPasswordSecretName
+          value: registryCredentials.passwords[0].value
+        }
+      ]
+    }
+    environmentId: containerEnvironment.id
+    template: {
+      containers: [
+        {
+          name: apiContainerAppName
+          image: '${registryServer}/gravitas-api:${imageTag}'
+          env: [
+            {
+              name: 'RENDER_JOB_STORE'
+              value: 'azure'
+            }
+            {
+              name: 'AZURE_STORAGE_CONNECTION_STRING'
+              secretRef: storageConnectionSecretName
+            }
+            {
+              name: 'RENDER_QUEUE_NAME'
+              value: renderQueueName
+            }
+            {
+              name: 'RENDER_BLOB_CONTAINER'
+              value: renderContainerName
+            }
+            {
+              name: 'RENDER_PUBLIC_BASE_URL'
+              value: apiPublicBaseUrl
+            }
+          ]
+          resources: {
+            cpu: json('0.5')
+            memory: '1Gi'
+          }
+        }
+      ]
+      scale: {
+        cooldownPeriod: 300
+        maxReplicas: 2
+        minReplicas: 1
+        pollingInterval: 30
+      }
+    }
+    workloadProfileName: 'Consumption'
+  }
+  dependsOn: [
+    renderQueue
+    renders
+  ]
+}
+
+resource workerContainerApp 'Microsoft.App/containerApps@2026-01-01' = if (deployApps) {
+  name: workerContainerAppName
+  location: location
+  tags: appTags
+  properties: {
+    configuration: {
+      activeRevisionsMode: 'Single'
+      maxInactiveRevisions: 100
+      registries: [
+        {
+          passwordSecretRef: registryPasswordSecretName
+          server: registryServer
+          username: containerRegistryName
+        }
+      ]
+      secrets: [
+        {
+          name: storageConnectionSecretName
+          value: storageConnectionString
+        }
+        {
+          name: registryPasswordSecretName
+          value: registryCredentials.passwords[0].value
+        }
+      ]
+    }
+    environmentId: containerEnvironment.id
+    template: {
+      containers: [
+        {
+          name: workerContainerAppName
+          image: '${registryServer}/gravitas-worker:${imageTag}'
+          env: [
+            {
+              name: 'AZURE_STORAGE_CONNECTION_STRING'
+              secretRef: storageConnectionSecretName
+            }
+            {
+              name: 'RENDER_QUEUE_NAME'
+              value: renderQueueName
+            }
+            {
+              name: 'RENDER_BLOB_CONTAINER'
+              value: renderContainerName
+            }
+            {
+              name: 'RENDER_OUTPUT_DIRECTORY'
+              value: '/app/output'
+            }
+          ]
+          resources: {
+            cpu: 1
+            memory: '2Gi'
+          }
+        }
+      ]
+      scale: {
+        cooldownPeriod: 300
+        maxReplicas: 1
+        minReplicas: 1
+        pollingInterval: 30
+      }
+    }
+    workloadProfileName: 'Consumption'
+  }
+  dependsOn: [
+    renderQueue
+    renders
+  ]
+}
+
+resource githubIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (bootstrapGithubIdentity) {
+  name: githubIdentityName
+  location: location
+}
+
+resource githubFederatedCredential 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = if (bootstrapGithubIdentity) {
+  parent: githubIdentity
+  name: githubFederatedCredentialName
+  properties: {
+    audiences: [
+      'api://AzureADTokenExchange'
+    ]
+    issuer: 'https://token.actions.githubusercontent.com'
+    subject: githubOidcSubject
+  }
+}
+
+resource githubContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (bootstrapGithubIdentity) {
+  name: githubContributorRoleAssignmentName
+  properties: {
+    principalId: githubIdentity!.properties.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: contributorRoleDefinitionId
+  }
+}
+
+output apiUrl string = apiPublicBaseUrl
+output containerRegistryServer string = registryServer
+output staticWebAppHostname string = staticWebApp.properties.defaultHostname
+output staticWebAppName string = staticWebApp.name

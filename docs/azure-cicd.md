@@ -3,10 +3,11 @@
 Gravitas uses the unreleased Azure deployment as its integration-test environment. A push to `main`, or a manual workflow dispatch, performs this sequence:
 
 1. Authenticate to Azure through GitHub OpenID Connect.
-2. Build commit-tagged API and worker images in Azure Container Registry.
-3. Deploy new Azure Container Apps revisions and verify their image tags.
-4. Build the web app with the deployed API URL and publish it to Azure Static Web Apps.
-5. Run [the live environment test](../scripts/test_live_environment.py) against the deployed stack.
+2. Deploy the Azure foundation from [infra/main.bicep](../infra/main.bicep) with application resources disabled.
+3. Build commit-tagged API and worker images in Azure Container Registry.
+4. Deploy the complete stack from the same Bicep template and verify the Container App image tags.
+5. Build the web app with the deployed API URL and publish it to Azure Static Web Apps.
+6. Run [the live environment test](../scripts/test_live_environment.py) against the deployed stack.
 
 The live test loads the public web app, checks API health, submits a real render, waits for the Azure queue and worker, downloads through the API proxy, and verifies both required PNG dimensions.
 
@@ -29,6 +30,26 @@ $subject = "$prefix`:environment:azure-test"
 ```
 
 Use `$subject` exactly. GitHub may issue an immutable owner/repository-ID prefix rather than the legacy name-only prefix, and Azure requires an exact match. Scope the deployment identity to `rg-gravitas`. Do not use a client secret; `azure/login` exchanges GitHub's short-lived identity token through OIDC.
+
+## Infrastructure Bootstrap
+
+[infra/parameters.test.json](../infra/parameters.test.json) defines the current test environment without storing credentials. The Bicep template derives the Storage and ACR secrets from Azure resource functions during deployment.
+
+A new environment requires an Azure Owner to bootstrap GitHub OIDC before the workflow can authenticate. Deploy with `bootstrapGithubIdentity=true`, then store the resulting identity client ID plus the tenant and subscription IDs in the `azure-test` GitHub environment. The normal workflow keeps `bootstrapGithubIdentity=false` because its Contributor identity must not grant roles to itself.
+
+The first deployment is intentionally two phase: deploy with `deployApps=false`, build the first commit-tagged images in the new ACR, then deploy with `deployApps=true` and that image tag.
+
+Before applying an infrastructure change, run:
+
+```powershell
+az bicep build --file infra/main.bicep --stdout | Out-Null
+az deployment group what-if `
+  --resource-group rg-gravitas `
+  --template-file infra/main.bicep `
+  --parameters infra/parameters.test.json
+```
+
+Azure currently reports false-positive modifications for the Container Apps environment's resolved Log Analytics customer ID, legacy Queue service logging defaults, and Static Web Apps read-only deployment/traffic properties. A valid review must still show no creates, deletes, or replacements for the existing test environment.
 
 ## Workflow
 

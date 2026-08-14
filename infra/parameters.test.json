@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus"
+    },
+    "staticWebAppLocation": {
+      "value": "eastus2"
+    },
+    "deployApps": {
+      "value": true
+    },
+    "bootstrapGithubIdentity": {
+      "value": false
+    },
+    "githubOidcSubject": {
+      "value": "repo:fabioc-aloha@128090839/gravitas@1333615492:environment:azure-test"
+    },
+    "imageTag": {
+      "value": "3e4aeca66ad6dea9a20450b7b0915eafd3058cb9"
+    },
+    "apiPublicBaseUrl": {
+      "value": "https://ca-gravitas-api.ashypebble-8202f9e4.eastus.azurecontainerapps.io"
+    },
+    "logAnalyticsWorkspaceName": {
+      "value": "law-gravitas-434092"
+    },
+    "storageAccountName": {
+      "value": "stgravitas434092"
+    },
+    "containerEnvironmentName": {
+      "value": "cae-gravitas-434092"
+    },
+    "staticWebAppName": {
+      "value": "swa-gravitas-434092"
+    },
+    "containerRegistryName": {
+      "value": "acrgravitas434092"
+    },
+    "githubContributorRoleAssignmentName": {
+      "value": "f7374c68-9e8d-494e-978b-5fc93a4919f1"
+    }
+  }
+}

@@ -41,6 +41,18 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Deploy Azure foundation from Bicep
+        run: >-
+          az deployment group create
+          --name "gravitas-foundation-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          --resource-group "$RESOURCE_GROUP"
+          --template-file infra/main.bicep
+          --parameters infra/parameters.test.json
+          imageTag="$GITHUB_SHA"
+          deployApps=false
+          bootstrapGithubIdentity=false
+          --output none
+
       - name: Build API image in Azure Container Registry
         run: >-
           az acr build
@@ -57,20 +69,16 @@ jobs:
           --file services/render-worker/Dockerfile
           .
 
-      - name: Deploy API revision
+      - name: Deploy Azure applications from Bicep
         run: >-
-          az containerapp update
-          --name "$API_APP_NAME"
+          az deployment group create
+          --name "gravitas-apps-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           --resource-group "$RESOURCE_GROUP"
-          --image "$ACR_SERVER/gravitas-api:${GITHUB_SHA}"
-          --output none
-
-      - name: Deploy worker revision
-        run: >-
-          az containerapp update
-          --name "$WORKER_APP_NAME"
-          --resource-group "$RESOURCE_GROUP"
-          --image "$ACR_SERVER/gravitas-worker:${GITHUB_SHA}"
+          --template-file infra/main.bicep
+          --parameters infra/parameters.test.json
+          imageTag="$GITHUB_SHA"
+          deployApps=true
+          bootstrapGithubIdentity=false
           --output none
 
       - name: Verify deployed container images

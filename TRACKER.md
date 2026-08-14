@@ -26,14 +26,14 @@
 | Render API | Running | `ca-gravitas-api`; tested revision `0000006` Ready |
 | Render worker | Running | `ca-gravitas-worker`; tested revision `0000006` Ready |
 | Deployment automation | Healthy | GitHub Actions run `31845522738`, attempt 2, deployed commit `3e4aeca` and passed the live Azure render gate |
-| Infrastructure as code | At risk | [infra/main.bicep](infra/main.bicep) defines storage only; live Azure resources extend beyond it |
+| Infrastructure as code | In progress | [infra/main.bicep](infra/main.bicep) covers the full stack and compiles cleanly; live pipeline validation is pending |
 
 ## Next Up
 
 | Order | Work item | Why now | First verifiable outcome |
 | ---: | --- | --- | --- |
 | 1 | G-002: Bound public render-job creation | The public endpoint can create unmetered Azure work; this is the largest release risk | A live Azure test proves unknown origins and over-quota submissions are rejected while the deployed web app can still render |
-| 2 | G-001: Reproduce the Azure stack from Bicep | Application deployment is automated, but the environment cannot be rebuilt from source | A disposable Azure deployment produces the same SWA, API, worker, queue, storage, registry, identity, and observability shape |
+| 2 | G-001: Reproduce the Azure stack from Bicep | The full stack is modeled and integrated into CI; it still needs live deployment proof | The Azure pipeline deploys foundation and applications from Bicep, then passes the real render gate without resource replacement |
 | 3 | G-004 and G-005: Complete and expose provenance | PNGs are trustworthy only when their metadata travels with them | The live test downloads metadata and verifies source, credit, crop, algorithm, seed, preset, and render date |
 | 4 | G-009: Split MVP requirements from reference-render goals | Current requirements mix delivered fast-render behavior with future Kerr behavior | Every MVP requirement maps to a deployed control, contract field, worker effect or explicit provenance-only label, and live assertion |
 
@@ -53,7 +53,7 @@
 
 | ID | Priority | Work item | Status | Evidence | Exit criteria |
 | --- | --- | --- | --- | --- | --- |
-| G-001 | P0 | Reproduce the live Azure deployment from source | In progress | [.github/workflows/deploy-and-test.yml](.github/workflows/deploy-and-test.yml) deploys applications; [infra/main.bicep](infra/main.bicep) still provisions only storage | Bicep covers SWA, Container Apps, queue, storage, registry, observability, identity/RBAC, and outputs; CI deploys a non-production environment from a reviewed workflow |
+| G-001 | P0 | Reproduce the live Azure deployment from source | In progress | [infra/main.bicep](infra/main.bicep) now covers SWA, Container Apps, queue, storage, registry, observability, GitHub OIDC bootstrap, and RBAC; `what-if` shows no create/delete/replace; live CI proof is pending | Bicep covers the full environment and CI deploys it before the real Azure render gate |
 | G-002 | P0 | Bound public render-job creation | Not started | [services/render-api/app/main.py](services/render-api/app/main.py) allows every CORS origin and exposes unauthenticated job creation without rate or quota controls | Allowed origins are explicit; render submission has an intentional authorization model and enforceable rate/quota limits; abuse-path tests pass |
 | G-003 | P1 | Correct the field-of-view contract description | Not started | Runtime preview and API both use `48 / zoom`; [packages/render-schema/render-request.schema.json](packages/render-schema/render-request.schema.json) still says `20 / zoom` | The shared schema documents `48 / zoom`, and deployed contract evidence confirms clients cannot override `field_of_view` |
 
