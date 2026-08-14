@@ -74,3 +74,40 @@ def test_seeded_rendering_is_byte_deterministic() -> None:
 
     assert np.array_equal(first, second)
     assert not np.array_equal(first, changed_seed)
+
+
+def test_orbit_retrograde_flow_and_blue_palette_change_the_approximation() -> None:
+    base = ThinDiskParameters(
+        inner_radius=3,
+        outer_radius=9,
+        inclination_degrees=60,
+        doppler_strength=0.6,
+    )
+    orbit = ThinDiskParameters(
+        inner_radius=3,
+        outer_radius=9,
+        inclination_degrees=60,
+        doppler_strength=0.6,
+        orbit_degrees=90,
+    )
+    retrograde = ThinDiskParameters(
+        inner_radius=3,
+        outer_radius=9,
+        inclination_degrees=60,
+        doppler_strength=0.6,
+        flow_direction="retrograde",
+    )
+    blue = ThinDiskParameters(
+        inner_radius=3,
+        outer_radius=9,
+        inclination_degrees=60,
+        doppler_strength=0.6,
+        blue_spectrum=True,
+    )
+
+    images = [
+        render_shadow_map(101, 61, 1, 20, seed=42, disk=parameters)
+        for parameters in (base, orbit, retrograde, blue)
+    ]
+
+    assert all(not np.array_equal(images[0], changed) for changed in images[1:])

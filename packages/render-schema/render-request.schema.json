@@ -1,25 +1,99 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Gravitas Render Request",
+  "description": "The API derives field_of_view as 20 / zoom; clients must not send field_of_view.",
   "type": "object",
-  "required": ["preset", "spin", "inclinationDegrees", "seed"],
+  "required": [
+    "axis_inclination_degrees",
+    "background",
+    "blue_spectrum",
+    "disk_thickness",
+    "disk_temperature",
+    "emissivity_slope",
+    "flow_direction",
+    "inner_disk_radius",
+    "jet_strength",
+    "magnetic_state",
+    "observing_band",
+    "orbit_degrees",
+    "seed",
+    "spin",
+    "zoom"
+  ],
   "properties": {
-    "preset": {
-      "enum": ["generic-kerr", "m87-2019", "sgr-a-2022", "artistic"]
+    "axis_inclination_degrees": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 85
+    },
+    "background": {
+      "type": "string",
+      "enum": ["procedural-stars", "deep-space"]
+    },
+    "blue_spectrum": {
+      "type": "boolean"
+    },
+    "disk_thickness": {
+      "type": "number",
+      "minimum": 0.02,
+      "maximum": 0.5
+    },
+    "disk_temperature": {
+      "type": "number",
+      "minimum": 1000000,
+      "maximum": 100000000
+    },
+    "emissivity_slope": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "flow_direction": {
+      "type": "string",
+      "enum": ["prograde", "retrograde"]
+    },
+    "inner_disk_radius": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 20
+    },
+    "jet_strength": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "magnetic_state": {
+      "type": "string",
+      "enum": ["sane", "mad"]
+    },
+    "mass": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "default": 1
+    },
+    "observing_band": {
+      "type": "string",
+      "enum": ["230-ghz", "optical"]
+    },
+    "orbit_degrees": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 360
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4294967295
     },
     "spin": {
       "type": "number",
       "minimum": 0,
       "maximum": 0.998
     },
-    "inclinationDegrees": {
+    "zoom": {
       "type": "number",
-      "minimum": 0,
-      "maximum": 85
-    },
-    "seed": {
-      "type": "integer",
-      "minimum": 0
+      "minimum": 0.5,
+      "maximum": 3
     }
   },
   "additionalProperties": false

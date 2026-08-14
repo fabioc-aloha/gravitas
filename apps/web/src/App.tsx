@@ -27,7 +27,7 @@ function App() {
     setIsExporting(true)
     setRenderError(null)
     try {
-      const urls = await requestWallpapers({ mass: 1, field_of_view: 20 }, setRenderStage)
+      const urls = await requestWallpapers(config, setRenderStage)
       for (const url of urls) {
         const link = document.createElement('a')
         link.href = url

@@ -4,12 +4,11 @@ version = "0.1.0"
 description = "CPU reference rasterizer for Gravitas."
 requires-python = ">=3.12"
 dependencies = [
+  "azure-core>=1.30,<2",
   "azure-storage-blob>=12.24,<13",
   "azure-storage-queue>=12.12,<13",
   "numpy>=2.0,<3",
   "pillow>=10,<12",
-  "azure-storage-blob>=12.24,<13",
-  "azure-storage-queue>=12.12,<13",
 ]
 
 [project.optional-dependencies]

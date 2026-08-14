@@ -36,9 +36,9 @@ CPU render worker -> Blob Storage -> dual-size PNG + metadata
 
 ## Server-rendered downloads
 
-The browser canvas is strictly a fast preview. The download control posts a minimal
-Schwarzschild request to `VITE_RENDER_API_URL/renders`, polls its UUID-backed job,
-and downloads the two unique PNG URLs returned when the worker completes.
+The browser canvas is strictly a fast preview. The download control posts every scene
+control to `VITE_RENDER_API_URL/renders`, polls its UUID-backed job, and downloads both
+PNGs through authenticated API proxy URLs. The Blob container remains private.
 
 ### Local development
 
@@ -57,9 +57,13 @@ $env:VITE_RENDER_API_URL = 'http://localhost:8000'
 npm run dev
 ```
 
-`POST /renders` requires a positive `mass` and `field_of_view`; it returns
-`202 {"job_id": "<uuid>", "status": "queued"}`. `GET /renders/{job_id}` returns
-the job stage and, once complete, the two `output_urls`.
+`POST /renders` accepts the snake_case schema in
+`packages/render-schema/render-request.schema.json`; `mass` defaults to `1.0`. The API
+is the only field-of-view source and persists `field_of_view = 20 / zoom`; clients must
+not send it. The response is `202 {"job_id": "<uuid>", "status": "queued"}`.
+`GET /renders/{job_id}` returns the stage and, once complete, two API `output_urls`.
+`GET /renders/{job_id}/files/{filename}` verifies that a completed job owns the
+filename, then streams the private blob as an attachment.
 
 ### Azure Queue/Blob configuration
 
@@ -69,9 +73,9 @@ Set these variables on both deployed services:
 |---|:---:|:---:|---|
 | `AZURE_STORAGE_CONNECTION_STRING` | yes | yes | Existing Storage account connection string |
 | `RENDER_QUEUE_NAME` | yes | yes | Existing Azure Queue carrying UUID job IDs |
-| `RENDER_BLOB_CONTAINER` | yes | yes | Existing Blob container for job JSON and PNGs |
+| `RENDER_BLOB_CONTAINER` | yes | yes | Existing private Blob container for job JSON, metadata, and PNGs |
 | `RENDER_JOB_STORE=azure` | yes | no | Select the Azure Queue/Blob job-store adapter |
-| `RENDER_PUBLIC_BASE_URL` | no | optional | Public blob/CDN base URL used for returned download links |
+| `RENDER_PUBLIC_BASE_URL` | recommended | no | External API base URL used for proxy links (set behind Azure ingress) |
 | `RENDER_OUTPUT_DIRECTORY` | no | optional | Worker scratch output path (default `/app/output`) |
 | `VITE_RENDER_API_URL` | web build | no | Public API base URL, without `/renders` |
 
@@ -83,10 +87,15 @@ az acr build --registry <registry> --image gravitas-worker:latest --file service
 ```
 
 The container and queue must already exist; this code does not provision Azure resources.
+Do not enable anonymous Blob access or expose the storage connection string to the web
+app. If `RENDER_PUBLIC_BASE_URL` is omitted, the API uses the request base URL; explicitly
+set it to the external HTTPS API origin when ingress rewrites the internal host or path.
 
 ## Controls
 
-Gravitas will expose spin, inclination, yaw, pitch, roll, field of view, disk inner/outer radius, disk temperature, emissivity profile, spectral index, disk thickness, jet overlay, background source, lensing quality, palette, and seed.
+Gravitas exposes spin, inclination, observer orbit, zoom, disk inner radius,
+temperature, emissivity, thickness, flow direction, magnetic state, jet strength,
+observing band, background, palette, and seed.
 
 The blue palette requested for Douglas is a selectable color mapping. Physically derived blue coloration from temperature and redshift is recorded separately from artistic palette transforms.
 
@@ -105,7 +114,10 @@ The blue palette requested for Douglas is a selectable color mapping. Physically
 - A broad bright EHT ring is not automatically a photon ring.
 - Inclined disks should show Doppler-driven brightness asymmetry by default.
 - Fast previews are labeled approximations; only the reference path is a general-relativistic ray-tracing model.
-- Current server PNGs use a Schwarzschild far-field capture rasterizer: they accurately apply
-  its capture threshold, but do not yet integrate lensed escaped geodesics, accretion-disk
-  emission, or Kerr spin.
+- Current server PNGs use a Schwarzschild far-field capture rasterizer with an
+  approximate projected thin disk. Orbit rotates screen-space disk azimuth,
+  retrograde flow flips the Doppler-beaming direction, blue spectrum is an artistic
+  palette, and spin is only a Doppler-strength visual proxy—not Kerr physics.
+- Background, disk thickness, jet strength, magnetic state, and observing band are
+  retained in the metadata sidecar as provenance but do not alter server physics yet.
 - NASA Webb/Hubble backgrounds retain source and crop provenance.

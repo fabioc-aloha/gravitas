@@ -2,10 +2,32 @@ import json
 import os
 from dataclasses import dataclass, field
 from enum import StrEnum
+from collections.abc import Iterable
 from typing import Protocol
 from uuid import uuid4
 
+from azure.core.exceptions import ResourceNotFoundError
+
 from .models import RenderRequest
+
+
+CURRENT_SCHEMA_VERSION = 2
+LEGACY_REQUEST_DEFAULTS: dict[str, object] = {
+    "axis_inclination_degrees": 30,
+    "background": "deep-space",
+    "blue_spectrum": True,
+    "disk_thickness": 0.1,
+    "disk_temperature": 25_000_000,
+    "emissivity_slope": 3,
+    "flow_direction": "prograde",
+    "inner_disk_radius": 6,
+    "jet_strength": 0,
+    "magnetic_state": "sane",
+    "observing_band": "230-ghz",
+    "orbit_degrees": 0,
+    "seed": 0,
+    "spin": 0.7,
+}
 
 
 class RenderStatus(StrEnum):
@@ -20,27 +42,44 @@ class RenderJob:
     job_id: str
     request: RenderRequest
     status: RenderStatus = RenderStatus.QUEUED
-    output_urls: list[str] = field(default_factory=list)
+    output_blob_names: list[str] = field(default_factory=list)
+    metadata_blob_name: str | None = None
 
     @classmethod
-    def new(cls, mass: float, field_of_view: float) -> "RenderJob":
-        return cls(str(uuid4()), RenderRequest(mass=mass, field_of_view=field_of_view))
+    def new(cls, request: RenderRequest) -> "RenderJob":
+        return cls(str(uuid4()), request)
 
     def to_dict(self) -> dict[str, object]:
         return {
+            "schema_version": CURRENT_SCHEMA_VERSION,
             "job_id": self.job_id,
             "request": self.request.model_dump(),
             "status": self.status,
-            "output_urls": self.output_urls,
+            "output_blob_names": self.output_blob_names,
+            "metadata_blob_name": self.metadata_blob_name,
         }
 
     @classmethod
     def from_dict(cls, value: dict[str, object]) -> "RenderJob":
+        request_value = dict(value["request"])
+        persisted_fov = request_value.pop("field_of_view", None)
+        is_legacy = "axis_inclination_degrees" not in request_value
+        if is_legacy:
+            if persisted_fov is None or float(persisted_fov) <= 0:
+                raise ValueError("Legacy render job requires a positive field_of_view.")
+            request_value = LEGACY_REQUEST_DEFAULTS | request_value
+            request_value["zoom"] = max(0.5, min(3.0, 20.0 / float(persisted_fov)))
+        request = RenderRequest.model_validate(request_value)
+        if not is_legacy and persisted_fov is not None and float(persisted_fov) != request.field_of_view:
+            raise ValueError("Persisted field_of_view does not match zoom.")
         return cls(
             job_id=str(value["job_id"]),
-            request=RenderRequest.model_validate(value["request"]),
+            request=request,
             status=RenderStatus(value["status"]),
-            output_urls=list(value.get("output_urls", [])),
+            output_blob_names=list(value.get("output_blob_names", [])),
+            metadata_blob_name=(
+                str(value["metadata_blob_name"]) if value.get("metadata_blob_name") else None
+            ),
         )
 
 
@@ -50,7 +89,11 @@ class JobStore(Protocol):
     def get(self, job_id: str) -> RenderJob | None: ...
 
     def update(
-        self, job_id: str, *, status: RenderStatus, output_urls: list[str] | None = None
+        self,
+        job_id: str,
+        *,
+        status: RenderStatus,
+        output_blob_names: list[str] | None = None,
     ) -> None: ...
 
 
@@ -65,12 +108,16 @@ class InMemoryJobStore:
         return self._jobs.get(job_id)
 
     def update(
-        self, job_id: str, *, status: RenderStatus, output_urls: list[str] | None = None
+        self,
+        job_id: str,
+        *,
+        status: RenderStatus,
+        output_blob_names: list[str] | None = None,
     ) -> None:
         job = self._jobs[job_id]
         job.status = status
-        if output_urls is not None:
-            job.output_urls = output_urls
+        if output_blob_names is not None:
+            job.output_blob_names = output_blob_names
 
 
 class AzureQueueBlobJobStore:
@@ -97,22 +144,40 @@ class AzureQueueBlobJobStore:
     def get(self, job_id: str) -> RenderJob | None:
         try:
             payload = self._blob(job_id).download_blob().readall()
-        except Exception as error:
-            if error.__class__.__name__ == "ResourceNotFoundError":
-                return None
-            raise
+        except ResourceNotFoundError:
+            return None
         return RenderJob.from_dict(json.loads(payload))
 
     def update(
-        self, job_id: str, *, status: RenderStatus, output_urls: list[str] | None = None
+        self,
+        job_id: str,
+        *,
+        status: RenderStatus,
+        output_blob_names: list[str] | None = None,
     ) -> None:
         job = self.get(job_id)
         if job is None:
             raise KeyError(job_id)
         job.status = status
-        if output_urls is not None:
-            job.output_urls = output_urls
+        if output_blob_names is not None:
+            job.output_blob_names = output_blob_names
         self._blob(job_id).upload_blob(json.dumps(job.to_dict()), overwrite=True)
+
+
+class BlobDownloader(Protocol):
+    def download(self, blob_name: str) -> Iterable[bytes]: ...
+
+
+class AzureBlobDownloader:
+    def __init__(self, connection_string: str, container_name: str) -> None:
+        from azure.storage.blob import BlobServiceClient
+
+        self._container = BlobServiceClient.from_connection_string(
+            connection_string
+        ).get_container_client(container_name)
+
+    def download(self, blob_name: str) -> Iterable[bytes]:
+        return self._container.download_blob(blob_name).chunks()
 
 
 def job_store_from_environment() -> JobStore:
@@ -128,5 +193,14 @@ def job_store_from_environment() -> JobStore:
     return AzureQueueBlobJobStore(
         os.environ["AZURE_STORAGE_CONNECTION_STRING"],
         os.environ["RENDER_QUEUE_NAME"],
+        os.environ["RENDER_BLOB_CONTAINER"],
+    )
+
+
+def blob_downloader_from_environment() -> BlobDownloader | None:
+    if os.getenv("RENDER_JOB_STORE", "memory").lower() != "azure":
+        return None
+    return AzureBlobDownloader(
+        os.environ["AZURE_STORAGE_CONNECTION_STRING"],
         os.environ["RENDER_BLOB_CONTAINER"],
     )

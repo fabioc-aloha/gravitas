@@ -1,9 +1,11 @@
 import json
 import os
 from pathlib import Path
-from urllib.parse import quote
 
-from .service import LocalRenderService, RenderJob
+from azure.core.exceptions import AzureError
+from azure.storage.blob import ContentSettings
+
+from .service import LocalRenderService, render_job_from_request
 
 
 class AzureRenderWorker:
@@ -15,7 +17,6 @@ class AzureRenderWorker:
         queue_name: str,
         container_name: str,
         output_directory: Path,
-        public_base_url: str | None = None,
     ) -> None:
         from azure.storage.blob import BlobServiceClient
         from azure.storage.queue import QueueServiceClient
@@ -27,7 +28,6 @@ class AzureRenderWorker:
             connection_string
         ).get_queue_client(queue_name)
         self._renderer = LocalRenderService(output_directory)
-        self._public_base_url = public_base_url.rstrip("/") if public_base_url else None
 
     @classmethod
     def from_environment(cls) -> "AzureRenderWorker":
@@ -40,7 +40,6 @@ class AzureRenderWorker:
             os.environ["RENDER_QUEUE_NAME"],
             os.environ["RENDER_BLOB_CONTAINER"],
             Path(os.getenv("RENDER_OUTPUT_DIRECTORY", "/app/output")),
-            os.getenv("RENDER_PUBLIC_BASE_URL"),
         )
 
     def run_once(self, visibility_timeout: int = 300) -> bool:
@@ -52,29 +51,60 @@ class AzureRenderWorker:
             return False
         job_blob = self._container.get_blob_client(f"jobs/{message.content}.json")
         job = json.loads(job_blob.download_blob().readall())
+        job_id = str(job["job_id"])
+        if job_id != message.content:
+            raise ValueError("Queue message job ID does not match persisted job.")
         job["status"] = "rendering"
         job_blob.upload_blob(json.dumps(job), overwrite=True)
         try:
             request = job["request"]
-            outputs = self._renderer.render(
-                RenderJob(message.content, request["mass"], request["field_of_view"])
-            )
-            urls = []
+            render_job = render_job_from_request(job_id, request)
+            outputs = self._renderer.render(render_job)
+            output_blob_names = []
             for output in outputs:
-                blob = self._container.get_blob_client(f"renders/{output.name}")
+                blob_name = f"renders/{output.name}"
+                blob = self._container.get_blob_client(blob_name)
                 with output.open("rb") as stream:
-                    blob.upload_blob(stream, overwrite=True, content_type="image/png")
-                urls.append(
-                    f"{self._public_base_url}/renders/{quote(output.name)}"
-                    if self._public_base_url
-                    else blob.url
-                )
+                    blob.upload_blob(
+                        stream,
+                        overwrite=True,
+                        content_settings=ContentSettings(content_type="image/png"),
+                    )
+                output_blob_names.append(blob_name)
+            metadata_blob_name = f"renders/gravitas-{job_id}.metadata.json"
+            metadata = {
+                "job_id": job_id,
+                "request": render_job.provenance,
+                "approximations": {
+                    "orbit_degrees": "screen-space disk azimuth rotation",
+                    "flow_direction": "Doppler-beaming direction only",
+                    "blue_spectrum": "artistic disk palette",
+                    "spin": "Doppler-strength proxy; not Kerr physics",
+                },
+                "provenance_only": [
+                    "background",
+                    "disk_thickness",
+                    "jet_strength",
+                    "magnetic_state",
+                    "observing_band",
+                ],
+            }
+            self._container.get_blob_client(metadata_blob_name).upload_blob(
+                json.dumps(metadata),
+                overwrite=True,
+                content_settings=ContentSettings(content_type="application/json"),
+            )
             job["status"] = "complete"
-            job["output_urls"] = urls
+            job["output_blob_names"] = output_blob_names
+            job["metadata_blob_name"] = metadata_blob_name
             job_blob.upload_blob(json.dumps(job), overwrite=True)
             self._queue.delete_message(message)
-        except Exception:
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
             job["status"] = "failed"
+            job["failure_reason"] = str(error)
             job_blob.upload_blob(json.dumps(job), overwrite=True)
+            self._queue.delete_message(message)
+            return True
+        except (AzureError, OSError):
             raise
         return True

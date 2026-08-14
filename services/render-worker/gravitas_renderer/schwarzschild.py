@@ -25,6 +25,9 @@ class ThinDiskParameters:
     emissivity_slope: float = 0.75
     inclination_degrees: float = 60.0
     doppler_strength: float = 0.45
+    orbit_degrees: float = 0.0
+    flow_direction: Literal["prograde", "retrograde"] = "prograde"
+    blue_spectrum: bool = False
 
     def __post_init__(self) -> None:
         if self.inner_radius <= 0 or self.outer_radius <= self.inner_radius:
@@ -35,6 +38,8 @@ class ThinDiskParameters:
             raise ValueError("Disk inclination must be in [0, 90) degrees.")
         if self.doppler_strength < 0:
             raise ValueError("Doppler strength must be non-negative.")
+        if not 0 <= self.orbit_degrees <= 360:
+            raise ValueError("Orbit must be in [0, 360] degrees.")
 
 
 def critical_impact_parameter(mass: float) -> float:
@@ -76,8 +81,15 @@ def thin_disk_intensity(
         * edge_factor
     )
     inclination = np.deg2rad(parameters.inclination_degrees)
+    beaming_azimuth = azimuth_array - np.deg2rad(parameters.orbit_degrees)
+    flow_sign = 1 if parameters.flow_direction == "prograde" else -1
     doppler = np.maximum(
-        0.0, 1 + parameters.doppler_strength * np.sin(inclination) * np.sin(azimuth_array)
+        0.0,
+        1
+        + flow_sign
+        * parameters.doppler_strength
+        * np.sin(inclination)
+        * np.sin(beaming_azimuth),
     ) ** 3
     intensity = np.where(inside, temperature**4 * doppler, 0.0)
     return float(intensity) if intensity.ndim == 0 else intensity
@@ -119,11 +131,16 @@ def _thin_disk_layer(
     radius = np.hypot(screen_x, disk_y)
     azimuth = np.arctan2(disk_y, screen_x)
     intensity = thin_disk_intensity(radius, azimuth, parameters)
-    # Warm blackbody-like palette; intensity is based on the physical profile.
+    # Palette selection is artistic; intensity is based on the approximate profile.
     layer = np.empty((*radius.shape, 3), dtype=np.float32)
-    layer[..., 0] = 255 * np.clip(intensity * 10, 0, 1)
-    layer[..., 1] = 170 * np.clip(intensity * 7, 0, 1)
-    layer[..., 2] = 82 * np.clip(intensity * 4, 0, 1)
+    if parameters.blue_spectrum:
+        layer[..., 0] = 82 * np.clip(intensity * 4, 0, 1)
+        layer[..., 1] = 170 * np.clip(intensity * 7, 0, 1)
+        layer[..., 2] = 255 * np.clip(intensity * 10, 0, 1)
+    else:
+        layer[..., 0] = 255 * np.clip(intensity * 10, 0, 1)
+        layer[..., 1] = 170 * np.clip(intensity * 7, 0, 1)
+        layer[..., 2] = 82 * np.clip(intensity * 4, 0, 1)
     return layer
 
 

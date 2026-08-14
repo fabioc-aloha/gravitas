@@ -1,8 +1,24 @@
 export type RenderStage = 'queued' | 'rendering' | 'complete' | 'failed'
 
-type RenderRequest = {
+import type { SceneConfig } from './sceneConfig'
+
+export type RenderRequest = {
+  axis_inclination_degrees: number
+  background: SceneConfig['background']
+  blue_spectrum: boolean
+  disk_thickness: number
+  disk_temperature: number
+  emissivity_slope: number
+  flow_direction: SceneConfig['flowDirection']
+  inner_disk_radius: number
+  jet_strength: number
+  magnetic_state: SceneConfig['magneticState']
   mass: number
-  field_of_view: number
+  observing_band: SceneConfig['observingBand']
+  orbit_degrees: number
+  seed: number
+  spin: number
+  zoom: number
 }
 
 type RenderResponse = {
@@ -15,8 +31,29 @@ type Fetch = typeof fetch
 
 const renderApiUrl = import.meta.env.VITE_RENDER_API_URL
 
+export function toRenderRequest(config: SceneConfig): RenderRequest {
+  return {
+    axis_inclination_degrees: config.axisInclinationDegrees,
+    background: config.background,
+    blue_spectrum: config.blueSpectrum,
+    disk_thickness: config.diskThickness,
+    disk_temperature: config.diskTemperature,
+    emissivity_slope: config.emissivitySlope,
+    flow_direction: config.flowDirection,
+    inner_disk_radius: config.innerDiskRadius,
+    jet_strength: config.jetStrength,
+    magnetic_state: config.magneticState,
+    mass: 1,
+    observing_band: config.observingBand,
+    orbit_degrees: config.orbitDegrees,
+    seed: config.seed,
+    spin: config.spin,
+    zoom: config.zoom,
+  }
+}
+
 export async function requestWallpapers(
-  request: RenderRequest,
+  config: SceneConfig,
   onStage: (stage: RenderStage) => void,
   fetcher: Fetch = fetch,
   wait: (milliseconds: number) => Promise<void> = (milliseconds) =>
@@ -26,7 +63,7 @@ export async function requestWallpapers(
   if (!apiUrl) throw new Error('VITE_RENDER_API_URL is required for wallpaper downloads.')
   const baseUrl = apiUrl.replace(/\/$/, '')
   const created = await fetcher(`${baseUrl}/renders`, {
-    body: JSON.stringify(request),
+    body: JSON.stringify(toRenderRequest(config)),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
   })
