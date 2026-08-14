@@ -1,8 +1,8 @@
 # Gravitas Delivery Tracker
 
 **Last audited**: 2026-08-14 \
-**Overall status**: MVP deployed; release readiness at risk \
-**Current objective**: Make the deployed fast-render MVP reproducible, bounded, and provenance-complete before expanding scientific fidelity.
+**Overall status**: MVP deployed; release controls incomplete \
+**Current objective**: Bound public render access, make Azure reproducible, and complete export provenance before expanding scientific fidelity.
 
 ## Status Key
 
@@ -18,7 +18,7 @@
 
 | Area | Status | Evidence verified 2026-08-14 |
 | --- | --- | --- |
-| Source | Healthy | CI/CD implementation and audit evidence are committed on `main` |
+| Source | Healthy | No application-code changes are pending; the deployed CI baseline is committed on `main` |
 | Web quality gates | Healthy | 12 tests passed; lint and production build passed |
 | Render API quality gates | Healthy | 21 tests passed |
 | Render worker quality gates | Healthy | 15 tests passed |
@@ -27,6 +27,17 @@
 | Render worker | Running | `ca-gravitas-worker`; tested revision `0000006` Ready |
 | Deployment automation | Healthy | GitHub Actions run `31845522738`, attempt 2, deployed commit `3e4aeca` and passed the live Azure render gate |
 | Infrastructure as code | At risk | [infra/main.bicep](infra/main.bicep) defines storage only; live Azure resources extend beyond it |
+
+## Next Up
+
+| Order | Work item | Why now | First verifiable outcome |
+| ---: | --- | --- | --- |
+| 1 | G-002: Bound public render-job creation | The public endpoint can create unmetered Azure work; this is the largest release risk | A live Azure test proves unknown origins and over-quota submissions are rejected while the deployed web app can still render |
+| 2 | G-001: Reproduce the Azure stack from Bicep | Application deployment is automated, but the environment cannot be rebuilt from source | A disposable Azure deployment produces the same SWA, API, worker, queue, storage, registry, identity, and observability shape |
+| 3 | G-004 and G-005: Complete and expose provenance | PNGs are trustworthy only when their metadata travels with them | The live test downloads metadata and verifies source, credit, crop, algorithm, seed, preset, and render date |
+| 4 | G-009: Split MVP requirements from reference-render goals | Current requirements mix delivered fast-render behavior with future Kerr behavior | Every MVP requirement maps to a deployed control, contract field, worker effect or explicit provenance-only label, and live assertion |
+
+**Decision needed for G-002**: choose the pre-release access model before implementation. Recommended: Static Web Apps authentication plus API authorization and a per-identity render quota. A temporary shared test token is simpler but weaker and creates secret-distribution debt.
 
 ## Delivered
 
@@ -44,7 +55,7 @@
 | --- | --- | --- | --- | --- | --- |
 | G-001 | P0 | Reproduce the live Azure deployment from source | In progress | [.github/workflows/deploy-and-test.yml](.github/workflows/deploy-and-test.yml) deploys applications; [infra/main.bicep](infra/main.bicep) still provisions only storage | Bicep covers SWA, Container Apps, queue, storage, registry, observability, identity/RBAC, and outputs; CI deploys a non-production environment from a reviewed workflow |
 | G-002 | P0 | Bound public render-job creation | Not started | [services/render-api/app/main.py](services/render-api/app/main.py) allows every CORS origin and exposes unauthenticated job creation without rate or quota controls | Allowed origins are explicit; render submission has an intentional authorization model and enforceable rate/quota limits; abuse-path tests pass |
-| G-003 | P0 | Resolve the field-of-view contract mismatch | Not started | [packages/render-schema/render-request.schema.json](packages/render-schema/render-request.schema.json) says `20 / zoom`; [services/render-api/app/models.py](services/render-api/app/models.py) computes `48 / zoom` | One documented formula owns preview, API, persisted jobs, and worker behavior; regression tests cover representative zoom values |
+| G-003 | P1 | Correct the field-of-view contract description | Not started | Runtime preview and API both use `48 / zoom`; [packages/render-schema/render-request.schema.json](packages/render-schema/render-request.schema.json) still says `20 / zoom` | The shared schema documents `48 / zoom`, and deployed contract evidence confirms clients cannot override `field_of_view` |
 
 ## Trustworthy Export Work
 
