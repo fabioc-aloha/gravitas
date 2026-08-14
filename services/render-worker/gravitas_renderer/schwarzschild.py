@@ -1,3 +1,11 @@
+"""Approximate Schwarzschild reference rasterization.
+
+Capture uses the exact far-field Schwarzschild critical impact parameter.
+Escaped-ray bending is deliberately a weak-field screen-space approximation,
+not numerical geodesic integration or general-relativistic ray tracing.
+"""
+
+from dataclasses import dataclass
 from math import sqrt
 from typing import Literal
 
@@ -5,6 +13,28 @@ import numpy as np
 
 
 RayOutcome = Literal["captured", "escaped"]
+
+
+@dataclass(frozen=True)
+class ThinDiskParameters:
+    """Controls the direct, projected thin-disk approximation in geometric units."""
+
+    inner_radius: float = 6.0
+    outer_radius: float = 12.0
+    temperature_scale: float = 1.0
+    emissivity_slope: float = 0.75
+    inclination_degrees: float = 60.0
+    doppler_strength: float = 0.45
+
+    def __post_init__(self) -> None:
+        if self.inner_radius <= 0 or self.outer_radius <= self.inner_radius:
+            raise ValueError("Disk radii must be positive and outer_radius must exceed inner_radius.")
+        if self.temperature_scale < 0 or self.emissivity_slope <= 0:
+            raise ValueError("Disk temperature scale must be non-negative and slope positive.")
+        if not 0 <= self.inclination_degrees < 90:
+            raise ValueError("Disk inclination must be in [0, 90) degrees.")
+        if self.doppler_strength < 0:
+            raise ValueError("Doppler strength must be non-negative.")
 
 
 def critical_impact_parameter(mass: float) -> float:
@@ -21,28 +51,113 @@ def classify_impact_parameter(impact_parameter: float, mass: float) -> RayOutcom
     return "captured" if impact_parameter <= critical_impact_parameter(mass) else "escaped"
 
 
-def render_shadow_map(width: int, height: int, mass: float, field_of_view: float) -> np.ndarray:
-    """Rasterize far-field ray capture against a Schwarzschild shadow.
+def thin_disk_intensity(
+    radius: float | np.ndarray,
+    azimuth: float | np.ndarray,
+    parameters: ThinDiskParameters,
+) -> float | np.ndarray:
+    """Return a dimensionless Novikov-Thorne-inspired radial disk brightness.
 
-    This first reference pass models capture exactly at the Schwarzschild
-    critical impact parameter. It does not yet integrate escaped geodesics
-    into a lensed background or accretion disk.
+    The zero-torque inner-edge factor and T^4 emissivity are retained, while
+    transfer, redshift, and lensing are intentionally not solved here.
+    """
+    radius_array = np.asarray(radius, dtype=np.float32)
+    azimuth_array = np.asarray(azimuth, dtype=np.float32)
+    inside = (radius_array >= parameters.inner_radius) & (
+        radius_array <= parameters.outer_radius
+    )
+    safe_radius = np.maximum(radius_array, parameters.inner_radius)
+    edge_factor = np.clip(
+        1 - np.sqrt(parameters.inner_radius / safe_radius), 0, None
+    ) ** 0.25
+    temperature = (
+        parameters.temperature_scale
+        * (safe_radius / parameters.inner_radius) ** (-parameters.emissivity_slope)
+        * edge_factor
+    )
+    inclination = np.deg2rad(parameters.inclination_degrees)
+    doppler = np.maximum(
+        0.0, 1 + parameters.doppler_strength * np.sin(inclination) * np.sin(azimuth_array)
+    ) ** 3
+    intensity = np.where(inside, temperature**4 * doppler, 0.0)
+    return float(intensity) if intensity.ndim == 0 else intensity
+
+
+def _deflected_celestial_sphere(
+    impact: np.ndarray, azimuth: np.ndarray, mass: float, seed: int
+) -> np.ndarray:
+    """Sample a deterministic procedural sky after weak-field radial bending."""
+    critical = critical_impact_parameter(mass)
+    # alpha = 4M/b is the leading Schwarzschild weak-field deflection term.
+    # It is capped near the photon sphere because this renderer does not
+    # integrate strong-field geodesics or construct multiple images.
+    deflection = np.minimum(4 * mass / np.maximum(impact, critical * 1.05), 1.25)
+    source_polar = np.arctan(impact / 10.0) + deflection
+    longitude = azimuth / (2 * np.pi) + 0.5
+    latitude = source_polar / np.pi
+
+    band = np.exp(-((latitude - 0.52 - 0.08 * np.sin(longitude * 5)) / 0.09) ** 2)
+    wave = 0.5 + 0.5 * np.sin(longitude * 33 + latitude * 19 + seed * 0.17)
+    cell_x = np.floor(longitude * 1300)
+    cell_y = np.floor(latitude * 700)
+    hashed = np.sin(cell_x * 12.9898 + cell_y * 78.233 + seed * 37.719) * 43758.5453
+    hashed -= np.floor(hashed)
+    stars = np.clip((hashed - 0.994) * 140, 0, 1)
+
+    sky = np.empty((*impact.shape, 3), dtype=np.float32)
+    sky[..., 0] = 3 + 8 * band + 3 * wave + 230 * stars
+    sky[..., 1] = 8 + 17 * band + 7 * wave + 230 * stars
+    sky[..., 2] = 20 + 40 * band + 15 * wave + 230 * stars
+    return sky
+
+
+def _thin_disk_layer(
+    screen_x: np.ndarray, screen_y: np.ndarray, parameters: ThinDiskParameters
+) -> np.ndarray:
+    inclination = np.deg2rad(parameters.inclination_degrees)
+    disk_y = screen_y / max(np.cos(inclination), 0.01)
+    radius = np.hypot(screen_x, disk_y)
+    azimuth = np.arctan2(disk_y, screen_x)
+    intensity = thin_disk_intensity(radius, azimuth, parameters)
+    # Warm blackbody-like palette; intensity is based on the physical profile.
+    layer = np.empty((*radius.shape, 3), dtype=np.float32)
+    layer[..., 0] = 255 * np.clip(intensity * 10, 0, 1)
+    layer[..., 1] = 170 * np.clip(intensity * 7, 0, 1)
+    layer[..., 2] = 82 * np.clip(intensity * 4, 0, 1)
+    return layer
+
+
+def render_shadow_map(
+    width: int,
+    height: int,
+    mass: float,
+    field_of_view: float,
+    *,
+    seed: int = 0,
+    disk: ThinDiskParameters | None = None,
+) -> np.ndarray:
+    """Rasterize capture, an approximate deflected sky, and a direct thin disk.
+
+    This is a deterministic artistic reference raster. Only the capture
+    threshold is exact Schwarzschild physics; escaped rays use the leading
+    weak-field ``4M/b`` bend with a strong-field cap. It is not a full GRRT
+    implementation and does not model geodesic disk intersections.
     """
     if width <= 0 or height <= 0:
         raise ValueError("Raster dimensions must be positive.")
     if field_of_view <= 0:
         raise ValueError("Field of view must be positive.")
+    if not isinstance(seed, int):
+        raise ValueError("Seed must be an integer.")
 
-    x = np.linspace(-field_of_view / 2, field_of_view / 2, width)
-    y = np.linspace(-field_of_view / 2, field_of_view / 2, height)
-    screen_x, screen_y = np.meshgrid(x, y)
+    parameters = disk or ThinDiskParameters()
+    x = np.linspace(-field_of_view / 2, field_of_view / 2, width, dtype=np.float32)
+    y = np.linspace(-field_of_view / 2, field_of_view / 2, height, dtype=np.float32)
+    screen_x, screen_y = np.broadcast_arrays(x[None, :], y[:, None])
     impact = np.hypot(screen_x, screen_y)
     captured = impact <= critical_impact_parameter(mass)
 
-    radius = np.clip(impact / (field_of_view * 0.71), 0, 1)
-    sky = np.empty((height, width, 3), dtype=np.uint8)
-    sky[..., 0] = (8 + 16 * (1 - radius)).astype(np.uint8)
-    sky[..., 1] = (19 + 34 * (1 - radius)).astype(np.uint8)
-    sky[..., 2] = (43 + 64 * (1 - radius)).astype(np.uint8)
+    sky = _deflected_celestial_sphere(impact, np.arctan2(screen_y, screen_x), mass, seed)
+    sky += _thin_disk_layer(screen_x, screen_y, parameters)
     sky[captured] = 0
-    return sky
+    return np.clip(sky, 0, 255).astype(np.uint8)

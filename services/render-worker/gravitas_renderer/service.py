@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from .schwarzschild import render_shadow_map
+from .schwarzschild import ThinDiskParameters, render_shadow_map
 
 OUTPUT_SIZES = ((5120, 1440), (3440, 1440))
 
@@ -13,6 +13,8 @@ class RenderJob:
     job_id: str
     mass: float
     field_of_view: float
+    seed: int = 0
+    disk: ThinDiskParameters | None = None
 
 
 class LocalRenderService:
@@ -25,7 +27,14 @@ class LocalRenderService:
         self._output_directory.mkdir(parents=True, exist_ok=True)
         outputs = []
         for width, height in OUTPUT_SIZES:
-            image = render_shadow_map(width, height, job.mass, job.field_of_view)
+            image = render_shadow_map(
+                width,
+                height,
+                job.mass,
+                job.field_of_view,
+                seed=job.seed,
+                disk=job.disk,
+            )
             output = self._output_directory / f"gravitas-{job.job_id}-{width}x{height}.png"
             Image.fromarray(image).save(output, format="PNG")
             outputs.append(output)

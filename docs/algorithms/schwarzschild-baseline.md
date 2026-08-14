@@ -1,17 +1,40 @@
-# Schwarzschild Raster Baseline
+# Schwarzschild Reference Raster
 
-The first Gravitas reference rasterizer models far-field null-ray capture around a non-spinning Schwarzschild black hole.
+Gravitas produces a deterministic CPU reference image of a non-spinning black
+hole. It is a visual approximation, **not** a general-relativistic ray-tracing
+(GRRT) renderer.
 
-## Implemented
+## Implemented model
 
-- Critical impact parameter: `b_crit = 3 sqrt(3) M`.
-- Vectorized screen-plane impact-parameter calculation.
-- Capture classification: rays with `b <= b_crit` enter the shadow; remaining rays sample a placeholder sky.
+- **Capture:** far-field rays with screen-plane impact parameter
+  `b <= 3 sqrt(3) M` are black. This Schwarzschild critical impact parameter
+  is the exact capture boundary used by this raster.
+- **Escaped celestial sphere:** every non-captured ray samples a deterministic
+  procedural celestial sphere (star cells, broad luminous band, and colour
+  variation). The sample's polar screen coordinate is displaced radially by
+  `alpha = 4M / b`, the leading weak-field Schwarzschild deflection term.
+  The correction is capped at 1.25 radians near the photon sphere so it cannot
+  be mistaken for a strong-field solver.
+- **Thin disk:** a direct projected plane has configurable inner/outer radii,
+  temperature scale, radial temperature slope, inclination, and Doppler-like
+  asymmetry. Its radial profile is
+  `T(r) = T0 (r/r_in)^(-p) [1 - sqrt(r_in/r)]^(1/4)` and brightness is
+  proportional to `T^4`. The asymmetry is a tunable `sin(azimuth)` boost
+  scaled by inclination; it is a visual Doppler proxy.
+- **Repeatability:** the procedural sphere is seeded. `RenderJob.seed`
+  forwards the same seed to both service PNG sizes, and defaults to `0`.
+  `LocalRenderService` writes `5120x1440` and `3440x1440` PNGs.
 
-## Not yet implemented
+## Approximation boundaries
 
-- Escaped-geodesic integration and background deflection.
-- Thin-disk intersections and higher-order lensed disk images.
-- Kerr spin, frame dragging, ISCO-derived disk edges, and relativistic transfer.
+The escaped-ray mapping does not integrate null geodesics, solve the
+Schwarzschild lens equation, conserve ray bundles, or generate photon rings
+and higher-order images. The disk is not intersected by lensed geodesics; it
+has no gravitational redshift, transverse Doppler effect, relativistic
+beaming, light travel time, self-occultation, or radiative transfer. Disk
+defaults use an inner radius of `6M` as a practical non-spinning reference,
+but that value is a configurable artistic model parameter rather than an
+ISCO/GRRT calculation.
 
-This is a correctness baseline for the shadow boundary, not yet a full general-relativistic transfer renderer.
+Kerr spin, frame dragging, exact escaped geodesics, geodesic disk
+intersections, and relativistic transfer remain out of scope.
