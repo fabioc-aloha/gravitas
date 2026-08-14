@@ -1,6 +1,14 @@
 import type { SceneConfig } from './sceneConfig'
 import { dopplerAsymmetry, observerOrbitRadians } from './previewPhysics'
 
+const webbBackground = new Image()
+webbBackground.src = '/backgrounds/webb-carina.webp'
+
+const backgroundReady = new Promise<void>((resolve, reject) => {
+  webbBackground.addEventListener('load', () => resolve(), { once: true })
+  webbBackground.addEventListener('error', () => reject(new Error('Could not load Webb background.')), { once: true })
+})
+
 function random(seed: number) {
   let state = seed >>> 0
   return () => {
@@ -17,9 +25,10 @@ function rgba(hex: string, opacity: number) {
   return `rgba(${red}, ${green}, ${blue}, ${opacity})`
 }
 
-export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
+export async function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   const context = canvas.getContext('2d')
   if (!context) return
+  await backgroundReady
 
   const { width, height } = canvas
   const style = getComputedStyle(document.documentElement)
@@ -40,6 +49,16 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   context.fillStyle = background
   context.fillRect(0, 0, width, height)
 
+  const sourceRatio = webbBackground.naturalWidth / webbBackground.naturalHeight
+  const targetRatio = width / height
+  const sourceWidth = sourceRatio > targetRatio ? webbBackground.naturalHeight * targetRatio : webbBackground.naturalWidth
+  const sourceHeight = sourceRatio > targetRatio ? webbBackground.naturalHeight : webbBackground.naturalWidth / targetRatio
+  const sourceX = (webbBackground.naturalWidth - sourceWidth) / 2
+  const sourceY = (webbBackground.naturalHeight - sourceHeight) / 2
+  context.globalAlpha = config.background === 'deep-space' ? 0.78 : 0.34
+  context.drawImage(webbBackground, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, width, height)
+  context.globalAlpha = 1
+
   const sky = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.65 / config.zoom)
   sky.addColorStop(0, rgba(blue, 0.15))
   sky.addColorStop(0.5, rgba(blue, 0.045))
@@ -47,7 +66,7 @@ export function renderScene(canvas: HTMLCanvasElement, config: SceneConfig) {
   context.fillStyle = sky
   context.fillRect(0, 0, width, height)
 
-  const stars = config.background === 'deep-space' ? 800 : 420
+  const stars = config.background === 'deep-space' ? 180 : 80
   for (let index = 0; index < stars; index += 1) {
     const x = centerX + (rand() * width - centerX) * config.zoom
     const y = centerY + (rand() * height - centerY) * config.zoom

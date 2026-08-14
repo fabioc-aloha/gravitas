@@ -4,8 +4,12 @@ version = "0.1.0"
 description = "Render job API for Gravitas."
 requires-python = ">=3.12"
 dependencies = [
+  "azure-storage-blob>=12.24,<13",
+  "azure-storage-queue>=12.12,<13",
   "fastapi>=0.115,<0.116",
   "uvicorn[standard]>=0.30,<1",
+  "azure-storage-blob>=12.24,<13",
+  "azure-storage-queue>=12.12,<13",
 ]
 
 [project.optional-dependencies]
@@ -16,3 +20,10 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]

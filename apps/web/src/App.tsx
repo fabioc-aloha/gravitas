@@ -2,18 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
-import { createRenderPlan, defaultSceneConfig, outputSizes, type SceneConfig } from './sceneConfig'
+import { defaultSceneConfig, outputSizes, type SceneConfig } from './sceneConfig'
 import { buildModelFormulas } from './formulas'
+import { requestWallpapers, type RenderStage } from './renderClient'
 import { renderScene } from './sceneRenderer'
 
 function App() {
   const [config, setConfig] = useState<SceneConfig>(defaultSceneConfig)
   const [controlsPage, setControlsPage] = useState<'basic' | 'nerds'>('basic')
   const [isExporting, setIsExporting] = useState(false)
+  const [renderStage, setRenderStage] = useState<RenderStage | null>(null)
+  const [renderError, setRenderError] = useState<string | null>(null)
   const previewRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    if (previewRef.current) renderScene(previewRef.current, config)
+    if (previewRef.current) void renderScene(previewRef.current, config)
   }, [config])
 
   function update<K extends keyof SceneConfig>(key: K, value: SceneConfig[K]) {
@@ -22,21 +25,20 @@ function App() {
 
   async function downloadWallpapers() {
     setIsExporting(true)
-    const plan = createRenderPlan(config)
-    for (const output of plan.outputs) {
-      const canvas = document.createElement('canvas')
-      canvas.width = output.width
-      canvas.height = output.height
-      renderScene(canvas, config)
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
-      if (!blob) continue
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      link.download = `gravitas-${output.width}x${output.height}.png`
-      link.click()
-      URL.revokeObjectURL(link.href)
+    setRenderError(null)
+    try {
+      const urls = await requestWallpapers({ mass: 1, field_of_view: 20 }, setRenderStage)
+      for (const url of urls) {
+        const link = document.createElement('a')
+        link.href = url
+        link.download = ''
+        link.click()
+      }
+    } catch (error) {
+      setRenderError(error instanceof Error ? error.message : 'Could not create the server render.')
+    } finally {
+      setIsExporting(false)
     }
-    setIsExporting(false)
   }
 
   return (
@@ -72,8 +74,9 @@ function App() {
             Blue-spectrum visualization
           </label>
           <button type="button" onClick={downloadWallpapers} disabled={isExporting}>
-            {isExporting ? 'Generating…' : 'Download both wallpapers'}
+            {isExporting ? `${renderStage ?? 'queued'} server render…` : 'Download both wallpapers'}
           </button>
+          {renderError && <p role="alert">{renderError}</p>}
           </> : <>
           <p className="nerd-note">Fast-preview proxies. GR ray tracing will make these reference-quality.</p>
           <label>Inner disk radius <output>{config.innerDiskRadius} r₍g₎</output>
