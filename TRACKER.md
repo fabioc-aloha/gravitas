@@ -53,7 +53,7 @@
 | ID | Priority | Work item | Status | Evidence | Exit criteria |
 | --- | --- | --- | --- | --- | --- |
 | G-001 | P0 | Reproduce the live Azure deployment from source | Done | [infra/main.bicep](infra/main.bicep) covers SWA, Container Apps, queue, storage, registry, observability, GitHub OIDC bootstrap, and RBAC; run `31847313897` deployed both phases and passed the real render gate | Bicep covers the full environment and CI deploys it before the real Azure render gate |
-| G-002 | P0 | Bound public render-job creation | Not started | [services/render-api/app/main.py](services/render-api/app/main.py) allows every CORS origin and exposes unauthenticated job creation without rate or quota controls | Allowed origins are explicit; render submission has an intentional authorization model and enforceable rate/quota limits; abuse-path tests pass |
+| G-002 | P0 | Bound public render-job creation | In progress | SWA linked-backend auth, hashed job ownership, explicit CORS, atomic daily Blob quotas, and a quota-limited CI route are implemented; live deployment and authenticated browser proof are pending | Direct and anonymous submissions are rejected; authenticated users can render only within quota; concurrent quota tests and live Azure gates pass |
 | G-003 | P1 | Correct the field-of-view contract description | Not started | Runtime preview and API both use `48 / zoom`; [packages/render-schema/render-request.schema.json](packages/render-schema/render-request.schema.json) still says `20 / zoom` | The shared schema documents `48 / zoom`, and deployed contract evidence confirms clients cannot override `field_of_view` |
 
 ## Trustworthy Export Work

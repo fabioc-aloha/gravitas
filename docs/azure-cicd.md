@@ -21,6 +21,7 @@ The workflow uses a GitHub environment named `azure-test` and requires these env
 | `AZURE_TENANT_ID` | Microsoft Entra tenant containing the identity |
 | `AZURE_SUBSCRIPTION_ID` | Subscription containing `rg-gravitas` |
 | `AZURE_STATIC_WEB_APPS_API_TOKEN` | Deployment token for `swa-gravitas-434092` |
+| `RENDER_SMOKE_TOKEN` | Random bearer token for the quota-limited CI render route |
 
 Read the repository's current OIDC subject prefix before creating the federated credential:
 
@@ -56,6 +57,20 @@ Azure currently reports false-positive modifications for the Container Apps envi
 The deployment definition is [.github/workflows/deploy-and-test.yml](../.github/workflows/deploy-and-test.yml). It uses a single concurrency group with cancellation disabled because two deployments must not race on the shared environment.
 
 The workflow does not run the local mock-backed suites. Its release assertion is the black-box test against deployed Azure resources. The local suites remain useful during development, but they are not the deployment gate.
+
+## Render Access Control
+
+Azure Static Web Apps links `ca-gravitas-api` as its `/api` backend. The linking operation configures the Container App to accept only SWA-proxied requests, so callers cannot forge `x-ms-client-principal` through the direct Container App hostname.
+
+[apps/web/public/staticwebapp.config.json](../apps/web/public/staticwebapp.config.json) requires the built-in `authenticated` role for user render routes. The API hashes the SWA-specific provider and user ID before persisting ownership or quota keys; it does not store the user's email or display name. Daily quotas use Blob ETag optimistic concurrency so multiple API replicas cannot oversubscribe a user.
+
+The `/api/ci/*` route remains anonymous at the SWA layer only so GitHub Actions can run a full render without an interactive user login. FastAPI requires `RENDER_SMOKE_TOKEN`, applies a separate daily quota, and owns those jobs under a fixed service identity. Keep the token only in the `azure-test` GitHub environment and the Container App secret store.
+
+The live pipeline must prove all three boundaries:
+
+1. The direct Container App hostname rejects requests.
+2. An anonymous render submission through SWA is rejected.
+3. The quota-limited CI service route completes and downloads both PNG sizes.
 
 ## Manual Live Test
 

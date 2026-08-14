@@ -4,7 +4,7 @@ from app.main import app
 
 
 def test_health_reports_service_status() -> None:
-    response = TestClient(app).get("/health")
+    response = TestClient(app).get("/api/health")
 
     assert response.status_code == 200
     assert response.json() == {"service": "gravitas-render-api", "status": "ok"}

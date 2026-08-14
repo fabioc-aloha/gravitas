@@ -1,17 +1,24 @@
 import json
 import os
+from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import StrEnum
 from collections.abc import Iterable
+from threading import Lock
 from typing import Protocol
 from uuid import uuid4
 
-from azure.core.exceptions import ResourceNotFoundError
+from azure.core import MatchConditions
+from azure.core.exceptions import (
+    ResourceExistsError,
+    ResourceModifiedError,
+    ResourceNotFoundError,
+)
 
 from .models import RenderRequest
 
 
-CURRENT_SCHEMA_VERSION = 3
+CURRENT_SCHEMA_VERSION = 4
 LEGACY_REQUEST_DEFAULTS: dict[str, object] = {
     "axis_inclination_degrees": 30,
     "background": "deep-space",
@@ -41,18 +48,20 @@ class RenderStatus(StrEnum):
 class RenderJob:
     job_id: str
     request: RenderRequest
+    owner_id: str | None = None
     status: RenderStatus = RenderStatus.QUEUED
     output_blob_names: list[str] = field(default_factory=list)
     metadata_blob_name: str | None = None
 
     @classmethod
-    def new(cls, request: RenderRequest) -> "RenderJob":
-        return cls(str(uuid4()), request)
+    def new(cls, request: RenderRequest, *, owner_id: str | None = None) -> "RenderJob":
+        return cls(str(uuid4()), request, owner_id)
 
     def to_dict(self) -> dict[str, object]:
         return {
             "schema_version": CURRENT_SCHEMA_VERSION,
             "job_id": self.job_id,
+            "owner_id": self.owner_id,
             "request": self.request.model_dump(),
             "status": self.status,
             "output_blob_names": self.output_blob_names,
@@ -80,6 +89,7 @@ class RenderJob:
         return cls(
             job_id=str(value["job_id"]),
             request=request,
+            owner_id=str(value["owner_id"]) if value.get("owner_id") else None,
             status=RenderStatus(value["status"]),
             output_blob_names=list(value.get("output_blob_names", [])),
             metadata_blob_name=(
@@ -100,6 +110,26 @@ class JobStore(Protocol):
         status: RenderStatus,
         output_blob_names: list[str] | None = None,
     ) -> None: ...
+
+
+class QuotaStore(Protocol):
+    def consume(self, subject: str, window: str, limit: int) -> bool: ...
+
+
+class InMemoryQuotaStore:
+    def __init__(self) -> None:
+        self._counts: dict[tuple[str, str], int] = defaultdict(int)
+        self._lock = Lock()
+
+    def consume(self, subject: str, window: str, limit: int) -> bool:
+        if limit <= 0:
+            return False
+        key = (subject, window)
+        with self._lock:
+            if self._counts[key] >= limit:
+                return False
+            self._counts[key] += 1
+            return True
 
 
 class InMemoryJobStore:
@@ -169,6 +199,45 @@ class AzureQueueBlobJobStore:
         self._blob(job_id).upload_blob(json.dumps(job.to_dict()), overwrite=True)
 
 
+class AzureBlobQuotaStore:
+    """Atomically consumes fixed-window quotas using Blob ETags."""
+
+    def __init__(self, connection_string: str, container_name: str) -> None:
+        from azure.storage.blob import BlobServiceClient
+
+        self._container = BlobServiceClient.from_connection_string(
+            connection_string
+        ).get_container_client(container_name)
+
+    def consume(self, subject: str, window: str, limit: int) -> bool:
+        if limit <= 0:
+            return False
+        blob = self._container.get_blob_client(f"quotas/{subject}/{window}.json")
+        for _ in range(5):
+            try:
+                download = blob.download_blob()
+                payload = json.loads(download.readall())
+                count = int(payload["count"])
+                if count >= limit:
+                    return False
+                blob.upload_blob(
+                    json.dumps({"count": count + 1}),
+                    overwrite=True,
+                    etag=download.properties.etag,
+                    match_condition=MatchConditions.IfNotModified,
+                )
+                return True
+            except ResourceNotFoundError:
+                try:
+                    blob.upload_blob(json.dumps({"count": 1}), overwrite=False)
+                    return True
+                except ResourceExistsError:
+                    continue
+            except ResourceModifiedError:
+                continue
+        raise RuntimeError("Could not update the render quota after concurrent writes.")
+
+
 class BlobDownloader(Protocol):
     def download(self, blob_name: str) -> Iterable[bytes]: ...
 
@@ -206,6 +275,15 @@ def blob_downloader_from_environment() -> BlobDownloader | None:
     if os.getenv("RENDER_JOB_STORE", "memory").lower() != "azure":
         return None
     return AzureBlobDownloader(
+        os.environ["AZURE_STORAGE_CONNECTION_STRING"],
+        os.environ["RENDER_BLOB_CONTAINER"],
+    )
+
+
+def quota_store_from_environment() -> QuotaStore:
+    if os.getenv("RENDER_JOB_STORE", "memory").lower() == "memory":
+        return InMemoryQuotaStore()
+    return AzureBlobQuotaStore(
         os.environ["AZURE_STORAGE_CONNECTION_STRING"],
         os.environ["RENDER_BLOB_CONTAINER"],
     )

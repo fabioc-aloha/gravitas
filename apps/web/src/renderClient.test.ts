@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { defaultSceneConfig } from './sceneConfig'
 import {
-  fetchRenderFile,
-  renderOutputFilename,
-  renderOutputLabel,
-  requestWallpapers,
-  toRenderRequest,
+    fetchRenderFile,
+    renderOutputFilename,
+    renderOutputLabel,
+    requestWallpapers,
+    toRenderRequest,
 } from './renderClient'
+import { defaultSceneConfig } from './sceneConfig'
 
 describe('requestWallpapers', () => {
   it('submits every scene control and polls until API download URLs are ready', async () => {
@@ -80,6 +80,22 @@ describe('requestWallpapers', () => {
     })
     expect(second).not.toHaveProperty('field_of_view')
     expect(Object.keys(second)).toHaveLength(16)
+  })
+
+  it('starts Static Web Apps sign-in when render creation is unauthorized', async () => {
+    const signIn = vi.fn()
+    const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 401 }))
+
+    await expect(requestWallpapers(
+      defaultSceneConfig,
+      () => {},
+      fetcher,
+      async () => {},
+      '/api',
+      signIn,
+    )).rejects.toThrow('Sign in is required')
+
+    expect(signIn).toHaveBeenCalledOnce()
   })
 
   it('labels each explicit output link by its rendered dimensions', () => {

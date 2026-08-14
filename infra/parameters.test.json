@@ -18,10 +18,10 @@
       "value": "repo:fabioc-aloha@128090839/gravitas@1333615492:environment:azure-test"
     },
     "imageTag": {
-      "value": "3e4aeca66ad6dea9a20450b7b0915eafd3058cb9"
+      "value": "4ced3d12bed4fba1814bd058b6f8cb663b094f14"
     },
     "apiPublicBaseUrl": {
-      "value": "https://ca-gravitas-api.ashypebble-8202f9e4.eastus.azurecontainerapps.io"
+      "value": "https://orange-wave-0893cf10f.7.azurestaticapps.net/api"
     },
     "logAnalyticsWorkspaceName": {
       "value": "law-gravitas-434092"

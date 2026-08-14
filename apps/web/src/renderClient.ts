@@ -29,7 +29,7 @@ type RenderResponse = {
 
 type Fetch = typeof fetch
 
-const renderApiUrl = import.meta.env.VITE_RENDER_API_URL
+const renderApiUrl = import.meta.env.VITE_RENDER_API_URL || '/api'
 
 export function renderOutputLabel(url: string): string {
   const match = url.match(/-(\d+)x(\d+)\.png(?:$|\?)/)
@@ -83,6 +83,10 @@ export async function requestWallpapers(
   wait: (milliseconds: number) => Promise<void> = (milliseconds) =>
     new Promise((resolve) => setTimeout(resolve, milliseconds)),
   apiUrl = renderApiUrl,
+  signIn: () => void = () => {
+    const returnUrl = encodeURIComponent(window.location.href)
+    window.location.assign(`/.auth/login/aad?post_login_redirect_uri=${returnUrl}`)
+  },
 ): Promise<string[]> {
   if (!apiUrl) throw new Error('VITE_RENDER_API_URL is required for wallpaper downloads.')
   const baseUrl = apiUrl.replace(/\/$/, '')
@@ -91,6 +95,11 @@ export async function requestWallpapers(
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
   })
+  if (created.status === 401) {
+    signIn()
+    throw new Error('Sign in is required to create wallpapers.')
+  }
+  if (created.status === 429) throw new Error('Daily render quota reached. Try again tomorrow.')
   if (!created.ok) throw new Error('Could not queue the server render.')
   const job = await created.json() as RenderResponse
   onStage(job.status)

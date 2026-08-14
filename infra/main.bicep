@@ -19,6 +19,16 @@ param imageTag string
 @description('Public API origin persisted in completed-job download URLs.')
 param apiPublicBaseUrl string
 
+@secure()
+@description('Bearer token used only by the quota-limited live CI render route.')
+param renderSmokeToken string = ''
+
+@description('Maximum render jobs per authenticated user per UTC day.')
+param renderDailyQuota int = 10
+
+@description('Maximum CI smoke renders per UTC day.')
+param renderSmokeDailyQuota int = 50
+
 @description('GitHub repository connected to the Static Web App.')
 param repositoryUrl string = 'https://github.com/fabioc-aloha/gravitas'
 
@@ -46,6 +56,7 @@ var registryServer = '${containerRegistry.name}.azurecr.io'
 var registryCredentials = containerRegistry.listCredentials()
 var registryPasswordSecretName = '${containerRegistryName}azurecrio-${containerRegistryName}'
 var storageConnectionSecretName = 'storage-connection'
+var smokeTokenSecretName = 'render-smoke-token'
 var storageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
 var contributorRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
 var foundationTags = {
@@ -270,6 +281,10 @@ resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = if (deployAp
           name: registryPasswordSecretName
           value: registryCredentials.passwords[0].value
         }
+        {
+          name: smokeTokenSecretName
+          value: renderSmokeToken
+        }
       ]
     }
     environmentId: containerEnvironment.id
@@ -299,6 +314,22 @@ resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = if (deployAp
               name: 'RENDER_PUBLIC_BASE_URL'
               value: apiPublicBaseUrl
             }
+            {
+              name: 'RENDER_ALLOWED_ORIGINS'
+              value: 'https://${staticWebApp.properties.defaultHostname}'
+            }
+            {
+              name: 'RENDER_DAILY_QUOTA'
+              value: string(renderDailyQuota)
+            }
+            {
+              name: 'RENDER_SMOKE_DAILY_QUOTA'
+              value: string(renderSmokeDailyQuota)
+            }
+            {
+              name: 'RENDER_SMOKE_TOKEN'
+              secretRef: smokeTokenSecretName
+            }
           ]
           resources: {
             cpu: json('0.5')
@@ -319,6 +350,16 @@ resource apiContainerApp 'Microsoft.App/containerApps@2026-01-01' = if (deployAp
     renderQueue
     renders
   ]
+}
+
+resource linkedApiBackend 'Microsoft.Web/staticSites/linkedBackends@2024-11-01' = if (deployApps) {
+  parent: staticWebApp
+  name: 'default'
+  kind: 'containerapp'
+  properties: {
+    backendResourceId: apiContainerApp.id
+    region: location
+  }
 }
 
 resource workerContainerApp 'Microsoft.App/containerApps@2026-01-01' = if (deployApps) {

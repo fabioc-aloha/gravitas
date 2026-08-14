@@ -37,8 +37,11 @@ CPU render worker -> Blob Storage -> dual-size PNG + metadata
 ## Server-rendered downloads
 
 The browser canvas is strictly a fast preview. The download control posts every scene
-control to `VITE_RENDER_API_URL/renders`, polls its UUID-backed job, and downloads both
-PNGs through authenticated API proxy URLs. The Blob container remains private.
+control to the same-origin `/api/renders` route, polls its UUID-backed job, and downloads
+both PNGs through authenticated API proxy URLs. Azure Static Web Apps links the Container
+App backend, rejects direct backend traffic, and supplies the authenticated principal.
+The Blob container remains private, and each authenticated identity has a daily render
+quota.
 
 ### Local development
 
@@ -53,17 +56,18 @@ python -m pytest
 
 # web app
 cd ../../apps/web
-$env:VITE_RENDER_API_URL = 'http://localhost:8000'
+$env:VITE_RENDER_API_URL = 'http://localhost:8000/api'
 npm run dev
 ```
 
-`POST /renders` accepts the snake_case schema in
+`POST /api/renders` accepts the snake_case schema in
 `packages/render-schema/render-request.schema.json`; `mass` defaults to `1.0`. The API
 is the only field-of-view source and persists `field_of_view = 48 / zoom`; clients must
 not send it. The response is `202 {"job_id": "<uuid>", "status": "queued"}`.
-`GET /renders/{job_id}` returns the stage and, once complete, two API `output_urls`.
-`GET /renders/{job_id}/files/{filename}` verifies that a completed job owns the
-filename, then streams the private blob as an attachment.
+`GET /api/renders/{job_id}` returns the stage and, once complete, two API `output_urls`.
+`GET /api/renders/{job_id}/files/{filename}` verifies the authenticated identity owns
+the job and that the completed job owns the filename, then streams the private blob as
+an attachment.
 
 ### Azure Queue/Blob configuration
 
@@ -77,7 +81,10 @@ Set these variables on both deployed services:
 | `RENDER_JOB_STORE=azure` | yes | no | Select the Azure Queue/Blob job-store adapter |
 | `RENDER_PUBLIC_BASE_URL` | recommended | no | External API base URL used for proxy links (set behind Azure ingress) |
 | `RENDER_OUTPUT_DIRECTORY` | no | optional | Worker scratch output path (default `/app/output`) |
-| `VITE_RENDER_API_URL` | web build | no | Public API base URL, without `/renders` |
+| `RENDER_ALLOWED_ORIGINS` | yes | no | Explicit browser origins accepted for local/direct development |
+| `RENDER_DAILY_QUOTA` | yes | no | Maximum render jobs per authenticated identity per UTC day |
+| `RENDER_SMOKE_TOKEN` | yes | no | CI-only bearer token stored as a Container App secret |
+| `VITE_RENDER_API_URL` | web build | no | API base URL for local development; deployed web defaults to `/api` |
 
 Build remotely from the repository root with Azure Container Registry, for example:
 

@@ -16,7 +16,8 @@ concurrency:
 
 env:
   API_APP_NAME: ca-gravitas-api
-  API_URL: https://ca-gravitas-api.ashypebble-8202f9e4.eastus.azurecontainerapps.io
+  API_URL: https://orange-wave-0893cf10f.7.azurestaticapps.net/api
+  DIRECT_API_URL: https://ca-gravitas-api.ashypebble-8202f9e4.eastus.azurecontainerapps.io
   ACR_NAME: acrgravitas434092
   ACR_SERVER: acrgravitas434092.azurecr.io
   RESOURCE_GROUP: rg-gravitas
@@ -51,6 +52,7 @@ jobs:
           imageTag="$GITHUB_SHA"
           deployApps=false
           bootstrapGithubIdentity=false
+          renderSmokeToken="${{ secrets.RENDER_SMOKE_TOKEN }}"
           --output none
 
       - name: Build API image in Azure Container Registry
@@ -79,6 +81,7 @@ jobs:
           imageTag="$GITHUB_SHA"
           deployApps=true
           bootstrapGithubIdentity=false
+          renderSmokeToken="${{ secrets.RENDER_SMOKE_TOKEN }}"
           --output none
 
       - name: Verify deployed container images
@@ -92,8 +95,6 @@ jobs:
 
       - name: Build web app with the deployed API URL
         working-directory: apps/web
-        env:
-          VITE_RENDER_API_URL: ${{ env.API_URL }}
         run: |
           npm ci
           npm run build
@@ -112,4 +113,6 @@ jobs:
           python scripts/test_live_environment.py
           --web-url "$WEB_URL"
           --api-url "$API_URL"
+          --direct-api-url "$DIRECT_API_URL"
+          --service-token "${{ secrets.RENDER_SMOKE_TOKEN }}"
           --timeout-seconds 900
