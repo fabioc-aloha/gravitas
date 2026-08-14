@@ -1,8 +1,8 @@
 # Gravitas Delivery Tracker
 
 **Last audited**: 2026-08-14 \
-**Overall status**: MVP deployed; release controls incomplete \
-**Current objective**: Bound public render access, make Azure reproducible, and complete export provenance before expanding scientific fidelity.
+**Overall status**: MVP deployed; release controls healthy and export provenance incomplete \
+**Current objective**: Complete and expose export provenance before expanding scientific fidelity.
 
 ## Status Key
 
@@ -18,25 +18,23 @@
 
 | Area | Status | Evidence verified 2026-08-14 |
 | --- | --- | --- |
-| Source | Healthy | No application-code changes are pending; the deployed CI baseline is committed on `main` |
-| Web quality gates | Healthy | 12 tests passed; lint and production build passed |
-| Render API quality gates | Healthy | 21 tests passed |
+| Source | Healthy | Security baseline `9ae76cd` is committed on `main` and deployed |
+| Web quality gates | Healthy | 13 tests passed; lint and production build passed |
+| Render API quality gates | Healthy | 30 tests passed |
 | Render worker quality gates | Healthy | 15 tests passed |
-| Static Web App | Running | `swa-gravitas-434092`; default environment Ready at 2026-08-14 22:15 UTC |
-| Render API | Running | `ca-gravitas-api`; Bicep-deployed revision `0000007` Ready |
-| Render worker | Running | `ca-gravitas-worker`; Bicep-deployed revision `0000007` Ready |
-| Deployment automation | Healthy | GitHub Actions run `31847313897` deployed commit `4ced3d1` and passed the live Azure render gate |
-| Infrastructure as code | Healthy | Foundation and application Bicep deployments succeeded in run `31847313897`; no resources were replaced |
+| Static Web App | Running | `swa-gravitas-434092`; authenticated render completed after the 2026-08-14 23:22 UTC deployment |
+| Render API | Running | `ca-gravitas-api`; secured Bicep-deployed revision `0000008` Ready |
+| Render worker | Running | `ca-gravitas-worker`; revision `0000008` Ready |
+| Deployment automation | Healthy | GitHub Actions run `31849924673` deployed `9ae76cd` and passed the live security and render gates |
+| Infrastructure as code | Healthy | The SWA linked backend and both application revisions deployed successfully in run `31849924673` |
 
 ## Next Up
 
 | Order | Work item | Why now | First verifiable outcome |
 | ---: | --- | --- | --- |
-| 1 | G-002: Bound public render-job creation | The public endpoint can create unmetered Azure work; this is the largest release risk | A live Azure test proves unknown origins and over-quota submissions are rejected while the deployed web app can still render |
-| 2 | G-004 and G-005: Complete and expose provenance | PNGs are trustworthy only when their metadata travels with them | The live test downloads metadata and verifies source, credit, crop, algorithm, seed, preset, and render date |
-| 3 | G-009: Split MVP requirements from reference-render goals | Current requirements mix delivered fast-render behavior with future Kerr behavior | Every MVP requirement maps to a deployed control, contract field, worker effect or explicit provenance-only label, and live assertion |
-
-**Decision needed for G-002**: choose the pre-release access model before implementation. Recommended: Static Web Apps authentication plus API authorization and a per-identity render quota. A temporary shared test token is simpler but weaker and creates secret-distribution debt.
+| 1 | G-004 and G-005: Complete and expose provenance | PNGs are trustworthy only when their metadata travels with them | The live test downloads metadata and verifies source, credit, crop, algorithm, seed, preset, and render date |
+| 2 | G-009: Split MVP requirements from reference-render goals | Current requirements mix delivered fast-render behavior with future Kerr behavior | Every MVP requirement maps to a deployed control, contract field, worker effect or explicit provenance-only label, and live assertion |
+| 3 | G-003: Correct the field-of-view contract description | The shared schema still documents the wrong derived formula | The schema documents `48 / zoom`, and deployed contract evidence confirms clients cannot override it |
 
 ## Delivered
 
@@ -45,6 +43,7 @@
 - Deterministic seeded Schwarzschild capture raster with weak-field background deflection.
 - Queue-backed Azure API and worker with persisted job states and private Blob outputs.
 - API-proxied downloads that verify the completed job owns the requested filename.
+- SWA-authenticated render access with hashed ownership and atomic per-identity daily quotas.
 - Azure metadata sidecar containing the submitted request and explicit approximation labels.
 - Deployed Static Web App, render API, and render worker.
 
@@ -53,7 +52,7 @@
 | ID | Priority | Work item | Status | Evidence | Exit criteria |
 | --- | --- | --- | --- | --- | --- |
 | G-001 | P0 | Reproduce the live Azure deployment from source | Done | [infra/main.bicep](infra/main.bicep) covers SWA, Container Apps, queue, storage, registry, observability, GitHub OIDC bootstrap, and RBAC; run `31847313897` deployed both phases and passed the real render gate | Bicep covers the full environment and CI deploys it before the real Azure render gate |
-| G-002 | P0 | Bound public render-job creation | In progress | SWA linked-backend auth, hashed job ownership, explicit CORS, atomic daily Blob quotas, and a quota-limited CI route are implemented; live deployment and authenticated browser proof are pending | Direct and anonymous submissions are rejected; authenticated users can render only within quota; concurrent quota tests and live Azure gates pass |
+| G-002 | P0 | Bound public render-job creation | Done | Run `31849924673` proved direct and anonymous access rejection plus the quota-limited CI render path; an authenticated browser render also completed against revision `0000008` | Direct and anonymous submissions are rejected; authenticated users can render only within quota; concurrent quota tests and live Azure gates pass |
 | G-003 | P1 | Correct the field-of-view contract description | Not started | Runtime preview and API both use `48 / zoom`; [packages/render-schema/render-request.schema.json](packages/render-schema/render-request.schema.json) still says `20 / zoom` | The shared schema documents `48 / zoom`, and deployed contract evidence confirms clients cannot override `field_of_view` |
 
 ## Trustworthy Export Work
@@ -64,7 +63,7 @@
 | G-005 | P1 | Expose metadata through the API and web app | Not started | Completed API responses return PNG URLs only; `metadata_blob_name` remains internal | Completed jobs return an authenticated metadata URL and the web app offers it beside both PNGs |
 | G-006 | P1 | Make control effects honest end to end | Partial | Disk thickness is accepted but does not affect preview or server output; jet strength is preview-only; magnetic state and observing band are provenance-only | Each control is implemented for its declared mode or visibly disabled/labeled as provenance-only in both preview and export UI |
 | G-007 | P1 | Bound client polling and support recovery | Not started | [apps/web/src/renderClient.ts](apps/web/src/renderClient.ts) polls indefinitely while a job remains queued or rendering | Polling has timeout/cancellation, bounded backoff, and a recoverable job URL or identifier; timeout and cancellation tests pass |
-| G-008 | P1 | Add end-to-end deployment verification | Partial | [.github/workflows/deploy-and-test.yml](.github/workflows/deploy-and-test.yml) passed submit, status, both dimensions, and download against Azure in run `31845522738`; metadata download remains outside the current API contract | CI runs a deployed-environment smoke test that verifies submit, status, metadata, both dimensions, and download |
+| G-008 | P1 | Add end-to-end deployment verification | Partial | [.github/workflows/deploy-and-test.yml](.github/workflows/deploy-and-test.yml) passed access controls, submit, status, both dimensions, and download against Azure in run `31849924673`; metadata download remains outside the current API contract | CI runs a deployed-environment smoke test that verifies submit, status, metadata, both dimensions, and download |
 
 ## Product Requirement Gaps
 
