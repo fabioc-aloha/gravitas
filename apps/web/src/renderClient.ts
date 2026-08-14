@@ -36,6 +36,10 @@ export function renderOutputLabel(url: string): string {
   return match ? `Download ${match[1]}×${match[2]}` : 'Download wallpaper'
 }
 
+export function renderOutputFilename(url: string): string {
+  return new URL(url).pathname.split('/').at(-1) ?? 'gravitas-wallpaper.png'
+}
+
 export async function fetchRenderFile(
   url: string,
   fetcher: Fetch = fetch,
@@ -44,7 +48,7 @@ export async function fetchRenderFile(
   if (!response.ok) throw new Error('Could not download the rendered wallpaper.')
   const disposition = response.headers.get('Content-Disposition') ?? ''
   const filenameMatch = disposition.match(/filename="([^"]+)"/)
-  const fallbackName = new URL(url).pathname.split('/').at(-1) ?? 'gravitas-wallpaper.png'
+  const fallbackName = renderOutputFilename(url)
   return {
     blob: await response.blob(),
     filename: filenameMatch?.[1] ?? fallbackName,

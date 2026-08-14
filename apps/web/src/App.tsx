@@ -4,7 +4,13 @@ import 'katex/dist/katex.min.css'
 
 import { defaultSceneConfig, outputSizes, type SceneConfig } from './sceneConfig'
 import { buildModelFormulas } from './formulas'
-import { fetchRenderFile, renderOutputLabel, requestWallpapers, type RenderStage } from './renderClient'
+import {
+  fetchRenderFile,
+  renderOutputFilename,
+  renderOutputLabel,
+  requestWallpapers,
+  type RenderStage,
+} from './renderClient'
 import { renderScene } from './sceneRenderer'
 
 function App() {
@@ -13,6 +19,7 @@ function App() {
   const [isExporting, setIsExporting] = useState(false)
   const [renderStage, setRenderStage] = useState<RenderStage | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null)
   const [downloadUrls, setDownloadUrls] = useState<string[]>([])
   const previewRef = useRef<HTMLCanvasElement>(null)
 
@@ -27,6 +34,7 @@ function App() {
   async function downloadWallpapers() {
     setIsExporting(true)
     setRenderError(null)
+    setDownloadNotice(null)
     setDownloadUrls([])
     try {
       const urls = await requestWallpapers(config, setRenderStage)
@@ -39,10 +47,33 @@ function App() {
 
   }
 
-  async function downloadRenderedFile(event: React.MouseEvent<HTMLAnchorElement>, url: string) {
-    event.preventDefault()
+  async function downloadRenderedFile(url: string) {
     setRenderError(null)
+    setDownloadNotice(null)
     try {
+      const picker = (window as Window & {
+        showSaveFilePicker?: (options: {
+          suggestedName: string
+          types: { accept: Record<string, string[]>; description: string }[]
+        }) => Promise<{
+          createWritable: () => Promise<{
+            close: () => Promise<void>
+            write: (data: Blob) => Promise<void>
+          }>
+        }>
+      }).showSaveFilePicker
+      if (picker) {
+        const handle = await picker.call(window, {
+          suggestedName: renderOutputFilename(url),
+          types: [{ accept: { 'image/png': ['.png'] }, description: 'PNG image' }],
+        })
+        const file = await fetchRenderFile(url)
+        const writable = await handle.createWritable()
+        await writable.write(file.blob)
+        await writable.close()
+        setDownloadNotice(`${file.filename} saved.`)
+        return
+      }
       const file = await fetchRenderFile(url)
       const objectUrl = URL.createObjectURL(file.blob)
       const link = document.createElement('a')
@@ -51,8 +82,10 @@ function App() {
       document.body.appendChild(link)
       link.click()
       link.remove()
-      URL.revokeObjectURL(objectUrl)
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+      setDownloadNotice(`${file.filename} download started.`)
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
       setRenderError(error instanceof Error ? error.message : 'Could not download the rendered wallpaper.')
     }
   }
@@ -94,7 +127,11 @@ function App() {
           </button>
           {downloadUrls.length > 0 && <div className="download-links" role="status">
             <strong>Render complete</strong>
-            {downloadUrls.map((url) => <a key={url} href={url} onClick={(event) => void downloadRenderedFile(event, url)}>{renderOutputLabel(url)}</a>)}
+            {downloadUrls.map((url) => <div className="download-item" key={url}>
+              <button type="button" onClick={() => void downloadRenderedFile(url)}>{renderOutputLabel(url).replace('Download', 'Save')}</button>
+              <a href={url} target="_blank" rel="noreferrer">Direct file</a>
+            </div>)}
+            {downloadNotice && <span>{downloadNotice}</span>}
           </div>}
           {renderError && <p role="alert">{renderError}</p>}
           </> : <>

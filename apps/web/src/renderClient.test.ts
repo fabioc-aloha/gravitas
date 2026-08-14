@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { defaultSceneConfig } from './sceneConfig'
-import { fetchRenderFile, renderOutputLabel, requestWallpapers, toRenderRequest } from './renderClient'
+import {
+  fetchRenderFile,
+  renderOutputFilename,
+  renderOutputLabel,
+  requestWallpapers,
+  toRenderRequest,
+} from './renderClient'
 
 describe('requestWallpapers', () => {
   it('submits every scene control and polls until API download URLs are ready', async () => {
@@ -81,6 +87,8 @@ describe('requestWallpapers', () => {
       .toBe('Download 5120×1440')
     expect(renderOutputLabel('https://api/renders/job/files/gravitas-job-3440x1440.png'))
       .toBe('Download 3440×1440')
+    expect(renderOutputFilename('https://api/renders/job/files/gravitas-job-3440x1440.png'))
+      .toBe('gravitas-job-3440x1440.png')
   })
 
   it('fetches a private proxy render into a locally downloadable blob', async () => {

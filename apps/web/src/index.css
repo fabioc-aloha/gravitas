@@ -79,6 +79,9 @@ button:hover { background: var(--cp-accent-hover); }
 button:disabled { cursor: wait; opacity: .65; }
 .download-links { background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: .625rem; display: grid; gap: 8px; padding: 12px; }
 .download-links a { color: var(--cp-link); font-weight: 700; }
+.download-item { align-items: center; display: grid; gap: 8px; grid-template-columns: 1fr auto; }
+.download-item button { padding: 9px 12px; text-align: left; }
+.download-item a { font-size: .85rem; }
 .tabs { display: flex; gap: 8px; }
 .tabs button { background: var(--cp-surface-soft); color: var(--cp-text-muted); padding: 8px 12px; }
 .tabs button.active { background: var(--cp-accent); color: var(--cp-accent-fg); }
