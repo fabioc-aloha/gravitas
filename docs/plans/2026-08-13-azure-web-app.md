@@ -88,3 +88,38 @@
 - Output metadata identifies preset, physical parameters, background source, palette mode, and algorithm mode.
 - The default service runs without a dedicated GPU.
 - GPU reference rendering is isolated as an explicitly selected, costed mode.
+
+## Rendering Roadmap and Priority
+
+### Priority 0: Complete trustworthy export plumbing
+
+1. Add signed Blob download URLs for completed jobs.
+2. Deploy the queue-backed API and render worker to the existing Container Apps environment.
+3. Persist job status transitions and dual-size output provenance.
+
+### Priority 1: Make production exports visually natural
+
+1. Use a real, provenance-tracked celestial-sphere source layer.
+2. Replace flat disk geometry with a Novikov-Thorne-inspired radial emission profile.
+3. Derive the reference-mode disk inner edge from spin and flow-direction ISCO constraints.
+4. Apply physically marked blackbody color and an HDR tone-mapping stage.
+
+### Priority 2: Implement the custom Kerr production renderer
+
+1. Add escaped-ray background deflection to the Schwarzschild baseline.
+2. Add thin-disk intersection and redshift transfer.
+3. Move from Schwarzschild to Kerr constants of motion and semi-analytic geodesic lookup tables.
+4. Generate a low-resolution validation suite covering M87*-informed, Sgr A*-informed, face-on, and high-inclination scenes.
+
+### Priority 3: Validate against established GRRT software
+
+1. Containerize ipole as an offline reference-render service.
+2. Build a render corpus and measure shadow, ring-position, and brightness-asymmetry differences.
+3. Use GYOTO only as an isolated subprocess/service after GPL distribution review.
+
+### Priority 4: Add optional high-compute research quality
+
+1. Evaluate GPU-capable Odyssey only after CPU quality and demand justify it.
+2. Add GRMHD snapshot, polarization, magnetic-state, and observing-frequency transfer only when the reference tier can support them.
+
+See `docs/research/rendering-methods.md` for software evaluation, method selection, citations, and licensing guardrails.
