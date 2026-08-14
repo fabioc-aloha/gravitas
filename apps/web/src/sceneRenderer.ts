@@ -1,5 +1,9 @@
 import type { SceneConfig } from './sceneConfig'
-import { dopplerAsymmetry, observerOrbitRadians } from './previewPhysics'
+import {
+  dopplerAsymmetry,
+  fieldOfViewForZoom,
+  observerOrbitRadians,
+} from './previewPhysics'
 
 const webbBackground = new Image()
 webbBackground.src = '/backgrounds/webb-carina.webp'
@@ -36,14 +40,19 @@ export async function renderScene(canvas: HTMLCanvasElement, config: SceneConfig
   const text = style.getPropertyValue('--cp-text').trim()
   const background = style.getPropertyValue('--cp-bg').trim()
   const rand = random(config.seed)
-  const centerX = width * 0.52
+  const centerX = width * 0.5
   const centerY = height * 0.5
-  const scale = Math.min(width, height) * config.zoom
+  const scale = Math.min(width, height)
+  const fieldOfView = fieldOfViewForZoom(config.zoom)
+  const pixelsPerM = height / fieldOfView
   const axisInclination = config.axisInclinationDegrees * Math.PI / 180
   const orbit = observerOrbitRadians(config.orbitDegrees)
   const beaming = dopplerAsymmetry(config.axisInclinationDegrees)
-  const diskHeight = Math.max(scale * 0.035, Math.cos(axisInclination) * scale * 0.14)
-  const diskWidth = scale * (0.4 - config.innerDiskRadius * 0.008)
+  const outerDiskRadius = Math.max(config.innerDiskRadius * 2, config.innerDiskRadius + 6)
+  const diskRadius = (config.innerDiskRadius + outerDiskRadius) * 0.5 * pixelsPerM
+  const diskWidth = diskRadius
+  const diskHeight = Math.max(1, Math.cos(axisInclination) * diskRadius)
+  const diskLineWidth = (outerDiskRadius - config.innerDiskRadius) * pixelsPerM
   const blue = config.blueSpectrum ? '#4da6ff' : accent
 
   context.fillStyle = background
@@ -59,7 +68,7 @@ export async function renderScene(canvas: HTMLCanvasElement, config: SceneConfig
   context.drawImage(webbBackground, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, width, height)
   context.globalAlpha = 1
 
-  const sky = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.65 / config.zoom)
+  const sky = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.65)
   sky.addColorStop(0, rgba(blue, 0.15))
   sky.addColorStop(0.5, rgba(blue, 0.045))
   sky.addColorStop(1, 'transparent')
@@ -68,8 +77,8 @@ export async function renderScene(canvas: HTMLCanvasElement, config: SceneConfig
 
   const stars = config.background === 'deep-space' ? 180 : 80
   for (let index = 0; index < stars; index += 1) {
-    const x = centerX + (rand() * width - centerX) * config.zoom
-    const y = centerY + (rand() * height - centerY) * config.zoom
+    const x = rand() * width
+    const y = rand() * height
     const size = rand() * 1.7 + 0.25
     context.fillStyle = rgba(text, 0.15 + rand() * 0.7)
     context.beginPath()
@@ -82,7 +91,8 @@ export async function renderScene(canvas: HTMLCanvasElement, config: SceneConfig
   context.rotate(orbit)
   const temperature = Math.min(1, config.diskTemperature / 100_000_000)
   const approachingSide = (Math.cos(orbit) >= 0 ? 1 : -1) * (config.flowDirection === 'prograde' ? 1 : -1)
-  const beamedOpacity = 0.2 + temperature * beaming * (0.25 + config.emissivitySlope * 0.08)
+  const dopplerStrength = 0.15 + 0.6 * config.spin
+  const beamedOpacity = 0.2 + temperature * beaming * dopplerStrength
   const diskGradient = context.createLinearGradient(-diskWidth, 0, diskWidth, 0)
   diskGradient.addColorStop(0, rgba(blue, 0.04))
   diskGradient.addColorStop(0.26, rgba(blue, 0.35))
@@ -98,20 +108,20 @@ export async function renderScene(canvas: HTMLCanvasElement, config: SceneConfig
   }
   diskGradient.addColorStop(1, rgba(blue, 0.04))
   context.strokeStyle = diskGradient
-  context.lineWidth = scale * (0.025 + config.diskThickness * 0.35)
-  context.filter = `blur(${Math.max(2, scale * 0.007)}px)`
+  context.lineWidth = diskLineWidth
+  context.filter = `blur(${Math.max(2, height * 0.004)}px)`
   context.beginPath()
   context.ellipse(0, 0, diskWidth, diskHeight, 0, 0, Math.PI * 2)
   context.stroke()
   context.filter = 'none'
-  context.lineWidth = scale * 0.008
+  context.lineWidth = Math.max(1, pixelsPerM * 0.15)
   context.strokeStyle = rgba(text, 0.5)
   context.beginPath()
   context.ellipse(0, 0, diskWidth, diskHeight, 0, 0, Math.PI * 2)
   context.stroke()
   context.restore()
 
-  const shadowRadius = scale * (0.11 + config.spin * 0.015)
+  const shadowRadius = 3 * Math.sqrt(3) * pixelsPerM
   if (config.jetStrength > 0) {
     context.save()
     context.translate(centerX, centerY)

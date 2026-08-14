@@ -11,7 +11,7 @@ from azure.core.exceptions import ResourceNotFoundError
 from .models import RenderRequest
 
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 LEGACY_REQUEST_DEFAULTS: dict[str, object] = {
     "axis_inclination_degrees": 30,
     "background": "deep-space",
@@ -61,6 +61,7 @@ class RenderJob:
 
     @classmethod
     def from_dict(cls, value: dict[str, object]) -> "RenderJob":
+        schema_version = int(value.get("schema_version", 1))
         request_value = dict(value["request"])
         persisted_fov = request_value.pop("field_of_view", None)
         is_legacy = "axis_inclination_degrees" not in request_value
@@ -70,7 +71,11 @@ class RenderJob:
             request_value = LEGACY_REQUEST_DEFAULTS | request_value
             request_value["zoom"] = max(0.5, min(3.0, 20.0 / float(persisted_fov)))
         request = RenderRequest.model_validate(request_value)
-        if not is_legacy and persisted_fov is not None and float(persisted_fov) != request.field_of_view:
+        if (
+            schema_version >= CURRENT_SCHEMA_VERSION
+            and persisted_fov is not None
+            and float(persisted_fov) != request.field_of_view
+        ):
             raise ValueError("Persisted field_of_view does not match zoom.")
         return cls(
             job_id=str(value["job_id"]),

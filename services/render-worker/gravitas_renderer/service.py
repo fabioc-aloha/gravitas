@@ -62,7 +62,7 @@ def render_job_from_request(job_id: str, request: dict[str, object]) -> RenderJo
         field_of_view=field_of_view,
         seed=int(normalized["seed"]),
         disk=disk,
-        provenance=normalized | {"schema_version": 1 if is_legacy else 2},
+        provenance=normalized | {"schema_version": 1 if is_legacy else 3},
     )
 
 

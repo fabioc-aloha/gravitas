@@ -59,7 +59,7 @@ npm run dev
 
 `POST /renders` accepts the snake_case schema in
 `packages/render-schema/render-request.schema.json`; `mass` defaults to `1.0`. The API
-is the only field-of-view source and persists `field_of_view = 20 / zoom`; clients must
+is the only field-of-view source and persists `field_of_view = 48 / zoom`; clients must
 not send it. The response is `202 {"job_id": "<uuid>", "status": "queued"}`.
 `GET /renders/{job_id}` returns the stage and, once complete, two API `output_urls`.
 `GET /renders/{job_id}/files/{filename}` verifies that a completed job owns the

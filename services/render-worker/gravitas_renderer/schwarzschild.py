@@ -91,7 +91,12 @@ def thin_disk_intensity(
         * np.sin(inclination)
         * np.sin(beaming_azimuth),
     ) ** 3
-    intensity = np.where(inside, temperature**4 * doppler, 0.0)
+    taper_width = max((parameters.outer_radius - parameters.inner_radius) * 0.2, 1e-6)
+    outer_taper = np.clip(
+        (parameters.outer_radius - radius_array) / taper_width, 0, 1
+    )
+    smooth_taper = outer_taper**2 * (3 - 2 * outer_taper)
+    intensity = np.where(inside, temperature**4 * doppler * smooth_taper, 0.0)
     return float(intensity) if intensity.ndim == 0 else intensity
 
 

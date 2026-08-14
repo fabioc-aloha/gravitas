@@ -27,4 +27,4 @@ class RenderRequest(BaseModel):
     @property
     def field_of_view(self) -> float:
         """Derive the server-render FOV from the UI zoom; clients cannot override it."""
-        return 20.0 / self.zoom
+        return 48.0 / self.zoom

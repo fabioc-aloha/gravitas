@@ -83,6 +83,7 @@ def test_thin_disk_profile_and_doppler_asymmetry_are_configurable() -> None:
     )
 
     assert thin_disk_intensity(5.9, 0.0, symmetric) == 0.0
+    assert thin_disk_intensity(12.0, 0.0, symmetric) == 0.0
     assert thin_disk_intensity(7.0, 0.0, asymmetric) > thin_disk_intensity(
         7.0, 0.0, symmetric
     )

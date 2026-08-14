@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { dopplerAsymmetry, observerOrbitRadians } from './previewPhysics'
+import {
+  dopplerAsymmetry,
+  fieldOfViewForZoom,
+  observerOrbitRadians,
+} from './previewPhysics'
 
 describe('preview physics controls', () => {
   it('has no Doppler-side asymmetry for a face-on aligned disk', () => {
@@ -14,5 +18,10 @@ describe('preview physics controls', () => {
   it('maps an observer orbit to a continuous full rotation', () => {
     expect(observerOrbitRadians(0)).toBe(0)
     expect(observerOrbitRadians(360)).toBeCloseTo(Math.PI * 2)
+  })
+
+  it('uses the same 48M vertical field as the server renderer', () => {
+    expect(fieldOfViewForZoom(1)).toBe(48)
+    expect(fieldOfViewForZoom(0.5)).toBe(96)
   })
 })

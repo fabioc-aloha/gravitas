@@ -108,7 +108,7 @@ def test_worker_persists_private_blob_names_and_metadata_sidecar(tmp_path) -> No
     assert saved["output_blob_names"] == [f"renders/{name}" for name in names]
     assert saved["metadata_blob_name"] == f"renders/gravitas-{job_id}.metadata.json"
     metadata = json.loads(container.blobs[saved["metadata_blob_name"]].payload)
-    assert metadata["request"] == request | {"schema_version": 2}
+    assert metadata["request"] == request | {"schema_version": 3}
     assert metadata["approximations"] == {
         "orbit_degrees": "screen-space disk azimuth rotation",
         "flow_direction": "Doppler-beaming direction only",

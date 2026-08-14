@@ -80,7 +80,7 @@ def test_complete_request_maps_to_render_and_thin_disk_parameters() -> None:
         flow_direction="retrograde",
         blue_spectrum=True,
     )
-    assert job.provenance == request | {"schema_version": 2}
+    assert job.provenance == request | {"schema_version": 3}
 
 
 def test_same_parameters_are_deterministic_and_blue_palette_changes_png_bytes(

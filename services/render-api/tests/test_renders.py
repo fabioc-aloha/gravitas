@@ -38,7 +38,7 @@ def test_post_render_persists_the_complete_request_and_derives_fov() -> None:
     UUID(body["job_id"])
     assert body == {"job_id": body["job_id"], "status": "queued"}
     persisted = store.get(body["job_id"]).to_dict()["request"]
-    assert persisted == FULL_REQUEST | {"mass": 1.0, "field_of_view": 10.0}
+    assert persisted == FULL_REQUEST | {"mass": 1.0, "field_of_view": 24.0}
 
 
 def test_render_request_schema_contains_every_control_with_snake_case_names() -> None:
@@ -188,4 +188,19 @@ def test_legacy_two_field_job_is_migrated_to_current_defaults() -> None:
     assert job.request.zoom == 2
     assert job.request.axis_inclination_degrees == 30
     assert job.request.seed == 0
-    assert job.to_dict()["schema_version"] == 2
+    assert job.to_dict()["schema_version"] == 3
+
+
+def test_version_two_job_remains_readable_after_field_of_view_recalibration() -> None:
+    job = RenderJob.from_dict(
+        {
+            "schema_version": 2,
+            "job_id": "12345678-1234-5678-1234-567812345678",
+            "request": FULL_REQUEST | {"mass": 1, "field_of_view": 10},
+            "status": "complete",
+            "output_blob_names": ["renders/legacy.png"],
+        }
+    )
+
+    assert job.status == RenderStatus.COMPLETE
+    assert job.output_blob_names == ["renders/legacy.png"]
