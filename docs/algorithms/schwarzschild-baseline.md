@@ -10,8 +10,8 @@ hole. It is a visual approximation, **not** a general-relativistic ray-tracing
   `b <= 3 sqrt(3) M` are black. This Schwarzschild critical impact parameter
   is the exact capture boundary used by this raster.
 - **Escaped celestial sphere:** every non-captured ray samples a deterministic
-  procedural celestial sphere (star cells, broad luminous band, and colour
-  variation). The sample's polar screen coordinate is displaced radially by
+  procedural celestial sphere or an aspect-cropped NASA Webb texture. The
+  sample's screen coordinate is displaced radially by
   `alpha = 4M / b`, the leading weak-field Schwarzschild deflection term.
   The correction is capped at 1.25 radians near the photon sphere so it cannot
   be mistaken for a strong-field solver.
@@ -24,6 +24,8 @@ hole. It is a visual approximation, **not** a general-relativistic ray-tracing
 - **Repeatability:** the procedural sphere is seeded. `RenderJob.seed`
   forwards the same seed to both service PNG sizes, and defaults to `0`.
   `LocalRenderService` writes `5120x1440` and `3440x1440` PNGs.
+- **Aspect preservation:** horizontal screen extent scales with output aspect
+  ratio so the Schwarzschild capture boundary remains circular in pixel space.
 
 ## Approximation boundaries
 

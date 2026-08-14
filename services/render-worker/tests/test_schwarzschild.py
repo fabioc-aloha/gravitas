@@ -26,6 +26,16 @@ def test_shadow_map_captures_center_rays_and_preserves_distant_sky() -> None:
     assert image[0, 0].max() > 0
 
 
+def test_ultrawide_raster_preserves_a_circular_schwarzschild_shadow() -> None:
+    image = render_shadow_map(width=320, height=90, mass=1.0, field_of_view=20.0)
+    captured_y, captured_x = np.where(np.all(image == 0, axis=2))
+
+    shadow_width = captured_x.max() - captured_x.min() + 1
+    shadow_height = captured_y.max() - captured_y.min() + 1
+
+    assert abs(shadow_width - shadow_height) <= 2
+
+
 def test_escaped_rays_sample_a_seeded_deflected_celestial_sphere() -> None:
     no_lens = render_shadow_map(
         width=81, height=81, mass=0.01, field_of_view=20.0, seed=17
@@ -36,6 +46,22 @@ def test_escaped_rays_sample_a_seeded_deflected_celestial_sphere() -> None:
 
     assert no_lens[0, 0].max() > 0
     assert np.any(no_lens[0, 20] != lensed[0, 20])
+
+
+def test_escaped_rays_can_sample_a_real_background_texture() -> None:
+    background = np.full((24, 48, 3), [120, 40, 20], dtype=np.uint8)
+    disk = ThinDiskParameters(temperature_scale=0)
+
+    image = render_shadow_map(
+        width=81,
+        height=41,
+        mass=0.01,
+        field_of_view=20,
+        background_image=background,
+        disk=disk,
+    )
+
+    assert image[0, 0].tolist() == [120, 40, 20]
 
 
 def test_thin_disk_profile_and_doppler_asymmetry_are_configurable() -> None:

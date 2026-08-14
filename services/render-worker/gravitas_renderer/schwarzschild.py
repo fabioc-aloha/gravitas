@@ -123,24 +123,71 @@ def _deflected_celestial_sphere(
     return sky
 
 
+def _deflected_background_texture(
+    background_image: np.ndarray,
+    screen_x: np.ndarray,
+    screen_y: np.ndarray,
+    impact: np.ndarray,
+    mass: float,
+    horizontal_field: float,
+    vertical_field: float,
+) -> np.ndarray:
+    """Sample an aspect-cropped RGB texture through weak radial deflection."""
+    if background_image.ndim != 3 or background_image.shape[2] != 3:
+        raise ValueError("Background image must have RGB channels.")
+
+    critical = critical_impact_parameter(mass)
+    deflection = np.minimum(4 * mass / np.maximum(impact, critical * 1.05), 1.25)
+    radial_scale = (impact + deflection) / np.maximum(
+        impact, np.finfo(np.float32).eps
+    )
+    u = np.clip(screen_x * radial_scale / horizontal_field + 0.5, 0, 1)
+    v = np.clip(screen_y * radial_scale / vertical_field + 0.5, 0, 1)
+
+    source_height, source_width = background_image.shape[:2]
+    target_aspect = horizontal_field / vertical_field
+    source_aspect = source_width / source_height
+    if source_aspect > target_aspect:
+        crop_height = source_height
+        crop_width = round(crop_height * target_aspect)
+        crop_x = (source_width - crop_width) // 2
+        crop_y = 0
+    else:
+        crop_width = source_width
+        crop_height = round(crop_width / target_aspect)
+        crop_x = 0
+        crop_y = (source_height - crop_height) // 2
+
+    sample_x = np.clip(
+        crop_x + np.rint(u * (crop_width - 1)), 0, source_width - 1
+    ).astype(int)
+    sample_y = np.clip(
+        crop_y + np.rint(v * (crop_height - 1)), 0, source_height - 1
+    ).astype(int)
+    return background_image[sample_y, sample_x].astype(np.float32)
+
+
 def _thin_disk_layer(
     screen_x: np.ndarray, screen_y: np.ndarray, parameters: ThinDiskParameters
 ) -> np.ndarray:
     inclination = np.deg2rad(parameters.inclination_degrees)
-    disk_y = screen_y / max(np.cos(inclination), 0.01)
-    radius = np.hypot(screen_x, disk_y)
-    azimuth = np.arctan2(disk_y, screen_x)
+    orbit = np.deg2rad(parameters.orbit_degrees)
+    disk_x = np.cos(orbit) * screen_x + np.sin(orbit) * screen_y
+    projected_y = -np.sin(orbit) * screen_x + np.cos(orbit) * screen_y
+    disk_y = projected_y / max(np.cos(inclination), 0.01)
+    radius = np.hypot(disk_x, disk_y)
+    azimuth = np.arctan2(disk_y, disk_x)
     intensity = thin_disk_intensity(radius, azimuth, parameters)
-    # Palette selection is artistic; intensity is based on the approximate profile.
+    exposure = 1 - np.exp(-intensity * 80)
     layer = np.empty((*radius.shape, 3), dtype=np.float32)
     if parameters.blue_spectrum:
-        layer[..., 0] = 82 * np.clip(intensity * 4, 0, 1)
-        layer[..., 1] = 170 * np.clip(intensity * 7, 0, 1)
-        layer[..., 2] = 255 * np.clip(intensity * 10, 0, 1)
+        layer[..., 0] = 95 * exposure
+        layer[..., 1] = 190 * exposure
+        layer[..., 2] = 255 * exposure
     else:
-        layer[..., 0] = 255 * np.clip(intensity * 10, 0, 1)
-        layer[..., 1] = 170 * np.clip(intensity * 7, 0, 1)
-        layer[..., 2] = 82 * np.clip(intensity * 4, 0, 1)
+        layer[..., 0] = 255 * exposure
+        layer[..., 1] = 175 * exposure
+        layer[..., 2] = 85 * exposure
     return layer
 
 
@@ -152,6 +199,7 @@ def render_shadow_map(
     *,
     seed: int = 0,
     disk: ThinDiskParameters | None = None,
+    background_image: np.ndarray | None = None,
 ) -> np.ndarray:
     """Rasterize capture, an approximate deflected sky, and a direct thin disk.
 
@@ -168,13 +216,29 @@ def render_shadow_map(
         raise ValueError("Seed must be an integer.")
 
     parameters = disk or ThinDiskParameters()
-    x = np.linspace(-field_of_view / 2, field_of_view / 2, width, dtype=np.float32)
+    aspect_ratio = width / height
+    horizontal_field = field_of_view * aspect_ratio
+    x = np.linspace(-horizontal_field / 2, horizontal_field / 2, width, dtype=np.float32)
     y = np.linspace(-field_of_view / 2, field_of_view / 2, height, dtype=np.float32)
     screen_x, screen_y = np.broadcast_arrays(x[None, :], y[:, None])
     impact = np.hypot(screen_x, screen_y)
     captured = impact <= critical_impact_parameter(mass)
 
-    sky = _deflected_celestial_sphere(impact, np.arctan2(screen_y, screen_x), mass, seed)
+    sky = (
+        _deflected_background_texture(
+            background_image,
+            screen_x,
+            screen_y,
+            impact,
+            mass,
+            horizontal_field,
+            field_of_view,
+        )
+        if background_image is not None
+        else _deflected_celestial_sphere(
+            impact, np.arctan2(screen_y, screen_x), mass, seed
+        )
+    )
     sky += _thin_disk_layer(screen_x, screen_y, parameters)
     sky[captured] = 0
     return np.clip(sky, 0, 255).astype(np.uint8)

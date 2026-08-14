@@ -13,9 +13,17 @@ def test_local_render_service_creates_both_required_uuid_named_pngs(
     calls: list[tuple[int, int, float, float, int]] = []
 
     def fake_shadow_map(
-        width: int, height: int, mass: float, field_of_view: float, *, seed: int, disk: object
+        width: int,
+        height: int,
+        mass: float,
+        field_of_view: float,
+        *,
+        seed: int,
+        disk: object,
+        background_image: object,
     ) -> np.ndarray:
         assert disk is None
+        assert background_image is None
         calls.append((width, height, mass, field_of_view, seed))
         return np.zeros((height, width, 3), dtype=np.uint8)
 

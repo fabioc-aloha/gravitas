@@ -1,6 +1,8 @@
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
 from .schwarzschild import ThinDiskParameters, render_shadow_map
@@ -67,8 +69,16 @@ def render_job_from_request(job_id: str, request: dict[str, object]) -> RenderJo
 class LocalRenderService:
     """Renders PNG artifacts locally; cloud workers can upload its results."""
 
-    def __init__(self, output_directory: Path) -> None:
+    def __init__(self, output_directory: Path, background_path: Path | None = None) -> None:
         self._output_directory = output_directory
+        configured_background = background_path or (
+            Path(value) if (value := os.getenv("RENDER_BACKGROUND_PATH")) else None
+        )
+        self._background_image = (
+            np.asarray(Image.open(configured_background).convert("RGB"))
+            if configured_background and configured_background.is_file()
+            else None
+        )
 
     def render(self, job: RenderJob) -> list[Path]:
         self._output_directory.mkdir(parents=True, exist_ok=True)
@@ -81,6 +91,11 @@ class LocalRenderService:
                 job.field_of_view,
                 seed=job.seed,
                 disk=job.disk,
+                background_image=(
+                    self._background_image
+                    if job.provenance.get("background") == "deep-space"
+                    else None
+                ),
             )
             output = self._output_directory / f"gravitas-{job.job_id}-{width}x{height}.png"
             Image.fromarray(image).save(output, format="PNG")
