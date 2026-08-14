@@ -73,7 +73,7 @@ def test_complete_request_maps_to_render_and_thin_disk_parameters() -> None:
         inner_radius=8.0,
         outer_radius=16.0,
         temperature_scale=2.0,
-        emissivity_slope=2.4,
+        emissivity_slope=0.6,
         inclination_degrees=72,
         doppler_strength=0.69,
         orbit_degrees=135,

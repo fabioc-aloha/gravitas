@@ -21,6 +21,9 @@ hole. It is a visual approximation, **not** a general-relativistic ray-tracing
   `T(r) = T0 (r/r_in)^(-p) [1 - sqrt(r_in/r)]^(1/4)` and brightness is
   proportional to `T^4`. The asymmetry is a tunable `sin(azimuth)` boost
   scaled by inclination; it is a visual Doppler proxy.
+  The UI's intensity emissivity index `q` is converted to temperature exponent
+  `q/4`, so the default `q=3` yields the standard `T proportional to r^-3/4`
+  thin-disk scaling rather than an unphysical `I proportional to r^-12`.
 - **Repeatability:** the procedural sphere is seeded. `RenderJob.seed`
   forwards the same seed to both service PNG sizes, and defaults to `0`.
   `LocalRenderService` writes `5120x1440` and `3440x1440` PNGs.

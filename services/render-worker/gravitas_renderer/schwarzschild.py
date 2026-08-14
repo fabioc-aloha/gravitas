@@ -178,7 +178,7 @@ def _thin_disk_layer(
     radius = np.hypot(disk_x, disk_y)
     azimuth = np.arctan2(disk_y, disk_x)
     intensity = thin_disk_intensity(radius, azimuth, parameters)
-    exposure = 1 - np.exp(-intensity * 80)
+    exposure = 1 - np.exp(-intensity * 8)
     layer = np.empty((*radius.shape, 3), dtype=np.float32)
     if parameters.blue_spectrum:
         layer[..., 0] = 95 * exposure

@@ -103,7 +103,7 @@ function App() {
           </div>
           <h2>{controlsPage === 'basic' ? 'Scene controls' : 'Model controls'}</h2>
           {controlsPage === 'basic' ? <>
-          <label>Spin <output>{config.spin.toFixed(3)}</output>
+          <label>Spin proxy a* <output>{config.spin.toFixed(3)}</output>
             <input type="range" min="0" max="0.998" step="0.001" value={config.spin} onChange={(event) => update('spin', Number(event.target.value))} />
           </label>
           <label>Spin/disk axis inclination <output>{config.axisInclinationDegrees}°</output>
@@ -115,7 +115,7 @@ function App() {
           <label>Zoom <output>{config.zoom.toFixed(1)}×</output>
             <input type="range" min="0.5" max="3" step="0.1" value={config.zoom} onChange={(event) => update('zoom', Number(event.target.value))} />
           </label>
-          <label>Disk temperature scale <output>{(config.diskTemperature / 1_000_000).toFixed(0)}M K</output>
+          <label>Emission temperature proxy <output>{(config.diskTemperature / 1_000_000).toFixed(0)}M K</output>
             <input type="range" min="1000000" max="100000000" step="1000000" value={config.diskTemperature} onChange={(event) => update('diskTemperature', Number(event.target.value))} />
           </label>
           <label className="checkbox">

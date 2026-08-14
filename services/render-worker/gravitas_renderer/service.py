@@ -11,7 +11,7 @@ OUTPUT_SIZES = ((5120, 1440), (3440, 1440))
 LEGACY_REQUEST_DEFAULTS: dict[str, object] = {
     "axis_inclination_degrees": 30,
     "background": "deep-space",
-    "blue_spectrum": True,
+    "blue_spectrum": False,
     "disk_thickness": 0.1,
     "disk_temperature": 25_000_000,
     "emissivity_slope": 3,
@@ -22,7 +22,7 @@ LEGACY_REQUEST_DEFAULTS: dict[str, object] = {
     "observing_band": "230-ghz",
     "orbit_degrees": 0,
     "seed": 0,
-    "spin": 0.7,
+    "spin": 0,
     "zoom": 1,
 }
 
@@ -49,7 +49,7 @@ def render_job_from_request(job_id: str, request: dict[str, object]) -> RenderJo
         inner_radius=inner_radius,
         outer_radius=max(inner_radius * 2, inner_radius + 6),
         temperature_scale=float(normalized["disk_temperature"]) / 25_000_000,
-        emissivity_slope=float(normalized["emissivity_slope"]),
+        emissivity_slope=float(normalized["emissivity_slope"]) / 4,
         inclination_degrees=float(normalized["axis_inclination_degrees"]),
         doppler_strength=round(0.15 + 0.6 * spin, 12),
         orbit_degrees=float(normalized["orbit_degrees"]),

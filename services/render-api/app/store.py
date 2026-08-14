@@ -15,7 +15,7 @@ CURRENT_SCHEMA_VERSION = 2
 LEGACY_REQUEST_DEFAULTS: dict[str, object] = {
     "axis_inclination_degrees": 30,
     "background": "deep-space",
-    "blue_spectrum": True,
+    "blue_spectrum": False,
     "disk_thickness": 0.1,
     "disk_temperature": 25_000_000,
     "emissivity_slope": 3,
@@ -26,7 +26,7 @@ LEGACY_REQUEST_DEFAULTS: dict[str, object] = {
     "observing_band": "230-ghz",
     "orbit_degrees": 0,
     "seed": 0,
-    "spin": 0.7,
+    "spin": 0,
 }
 
 

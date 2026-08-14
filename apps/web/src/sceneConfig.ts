@@ -19,7 +19,7 @@ export type SceneConfig = {
 export const defaultSceneConfig: SceneConfig = {
   axisInclinationDegrees: 30,
   background: 'deep-space',
-  blueSpectrum: true,
+  blueSpectrum: false,
   diskThickness: 0.1,
   diskTemperature: 25_000_000,
   emissivitySlope: 3,
@@ -30,8 +30,8 @@ export const defaultSceneConfig: SceneConfig = {
   observingBand: '230-ghz',
   orbitDegrees: 0,
   seed: 42,
-  spin: 0.7,
-  zoom: 1,
+  spin: 0,
+  zoom: 0.7,
 }
 
 export const outputSizes = [

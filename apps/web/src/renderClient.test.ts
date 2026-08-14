@@ -37,7 +37,7 @@ describe('requestWallpapers', () => {
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
       axis_inclination_degrees: 30,
       background: 'deep-space',
-      blue_spectrum: true,
+      blue_spectrum: false,
       disk_temperature: 25_000_000,
       disk_thickness: 0.1,
       emissivity_slope: 3,
@@ -49,8 +49,8 @@ describe('requestWallpapers', () => {
       observing_band: '230-ghz',
       orbit_degrees: 0,
       seed: 42,
-      spin: 0.7,
-      zoom: 1,
+      spin: 0,
+      zoom: 0.7,
     })
     expect(stages).toEqual(['queued', 'rendering', 'complete'])
     expect(urls).toEqual([

@@ -25,14 +25,15 @@ Generate scientifically informed black-hole wallpapers for Douglas. Each render 
 |---|---|---|
 | Research preset | M87*-informed, Sgr A*-informed, generic Kerr, artistic | Generic Kerr |
 | Dimension | Both fixed outputs | 5120x1440 + 3440x1440 |
-| Spin `a/M` | 0.0 to 0.998 | 0.7 |
+| Spin `a/M` | 0.0 to 0.998 | 0.0 in Schwarzschild mode |
 | Shared spin/disk-axis inclination | 0 to 85 degrees | 30 degrees |
 | Observer orbit / azimuth about the shared axis | 0 to 360 degrees | 0 degrees |
 | Camera roll | -180 to 180 degrees | 0 degrees |
 | Field of view | 5 to 90 degrees | 35 degrees |
 | Accretion-disk inner radius | ISCO to 20 gravitational radii | ISCO |
 | Accretion-disk outer radius | inner radius + 1 to 100 gravitational radii | 30 gravitational radii |
-| Disk temperature scale | 1,000 K to 100,000,000 K | preset-defined |
+| Disk temperature scale | 1,000,000 K to 100,000,000 K | visualization proxy until mass/accretion rate are modeled |
+| Radial intensity emissivity `q` | 1.0 to 5.0 | 3.0; thermal temperature exponent is `q/4` |
 | Disk emissivity profile | GLM-inspired, power law, extended disk | GLM-inspired |
 | Spectral index | -2.0 to 2.0 | 0.0 |
 | Disk thickness | razor thin to thick | thin |

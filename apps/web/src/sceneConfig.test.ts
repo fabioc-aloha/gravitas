@@ -6,11 +6,13 @@ describe('createRenderPlan', () => {
   it('uses a shared spin and disk axis with observer orbit', () => {
     expect(defaultSceneConfig).toMatchObject({
       axisInclinationDegrees: 30,
+      blueSpectrum: false,
       diskThickness: 0.1,
       emissivitySlope: 3,
       innerDiskRadius: 6,
       orbitDegrees: 0,
-      zoom: 1,
+      spin: 0,
+      zoom: 0.7,
     })
   })
 
